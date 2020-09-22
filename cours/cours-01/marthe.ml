@@ -747,7 +747,7 @@ let compile : e -> instruction array =
         let (pos, init_accu)    = (pos + 1, [ ResetAccu nb_idx' ]) in
         let pos_body            = pos in
         let (pos, instrs_body)  = aux nb_idx' variable_idx' pos body in
-        (pos + 2,
+        (pos + 5,
          instrs_start
          @ set_x
          @ instrs_stop

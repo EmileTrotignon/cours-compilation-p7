@@ -8,10 +8,15 @@ let identifier = ['a'-'z']['A'-'Z' '0'-'9' 'a'-'z' '_']*
 
 rule token = parse
 | eof             { EOF }
+| "sum"           { SUM }
 | layout          { token lexbuf }
 | number as i     { INT (int_of_string i) }
 | identifier as s { ID s }
 | "+"             { PLUS }
+| "*"             { STAR }
+| "("             { LPAR }
+| ")"             { RPAR }
+| ","             { COMMA }
 | _ as c {
   failwith (Printf.sprintf "Invalid character: %c\n" c)
 }

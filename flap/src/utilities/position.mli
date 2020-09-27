@@ -28,6 +28,8 @@ val destruct: 'a located -> 'a * t
 (** [located f x] applies [f] to the value of [x]. *)
 val located : ('a -> 'b) -> 'a located -> 'b
 
+val with_val : 'b -> 'a located -> 'b located
+
 (** [with_pos p v] decorates [v] with a position [p]. *)
 val with_pos : t -> 'a -> 'a located
 

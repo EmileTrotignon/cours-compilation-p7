@@ -38,6 +38,9 @@ let destruct p =
 let located f x =
   f (value x)
 
+let with_val value located =
+  {value=value; position=located.position}
+
 let with_pos p v =
   {
     value     = v;

@@ -180,3 +180,6 @@
 ** Introduction à flap et au Jalon 1
    Voir le [[file:../flap][code]] du compilateur Flap, ainsi que l'énoncé du
    jalon 1, dans [[../jalons/jalon-1.pdf][jalon-1.pdf]].
+* Cours 4 : Introduction à la sémantique (1/2) <2020-09-28>
+  Voir les
+  [[file:cours-04-a-06/cours-04-a-06-intro-semantique-typage.pdf][transparents]].

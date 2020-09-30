@@ -10,8 +10,11 @@
 
 %token         TYPE
 %token         LET
+%token         FUN
+%token         EXTERN
 %token         BACKSLASH
 %token         AND
+%token         AMPERSAND
 
 %token         UNDERSCORE
 
@@ -27,7 +30,7 @@
 
 %token         SEMICOLON
 
-%token         ANDAND
+%token         DOUBLEAMPERSAND
 %token         PIPEPIPE
 %token         EQUALQUESTION
 %token         LANGLEEQUALQUESTION
@@ -43,11 +46,14 @@
 %token         MINUS
 %token         STAR
 %token         SLASH
-%token         LANGLE
-%token         RANGLE
 %token         ARROW
 %token         COMMA
 
+
+%token         LANGLE
+%token         RANGLE
+%token         LBRACK 
+%token         RBRACK 
 %token         LPAR
 %token         RPAR
 %token         LCBRACK
@@ -64,7 +70,7 @@
 
 %left REF
 
-%left ANDAND
+%left DOUBLEAMPERSAND
 %left PIPEPIPE
 
 %left EQUALQUESTION

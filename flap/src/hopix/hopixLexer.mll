@@ -42,7 +42,8 @@ let char = "'" atom "'"
 let lpar = "("
 let rpar = ")"
 let backslash = "\\"
-let andand = "&&"
+let ampersand = "&"
+let double_ampersand = "&&"
 let pipepipe = "||"
 let equal_question = "=?" 
 let lbrack_equal_question = "<=?"
@@ -65,6 +66,8 @@ let langle = "<"
 let rangle = ">"
 let arrow = "->"
 let comma = ","
+let lbrack = "["
+let rbrack = "]"
 let lcbrack = "{"
 let rcbrack = "}"
 let lowercase_id = lowercase_letter ((letter | digit | '_')*)
@@ -95,10 +98,13 @@ and token = parse
   (* atomic lexemes *)
   | "let"                 { LET                 }
   | "type"                { TYPE                }
+  | "fun"                 { FUN                 }
   | "ref"                 { REF                 }
   | "if"                  { IF                  }
   | "else"                { ELSE                }
-  | "while"               { WHILE               }  
+  | "while"               { WHILE               }
+  | "extern"              { EXTERN              }
+  | "and"                 { AND                 }
   | lcbrack               { LCBRACK             }
   | rcbrack               { RCBRACK             }
   | backslash             { BACKSLASH           }
@@ -107,6 +113,8 @@ and token = parse
   | arrow                 { ARROW               }
   | lpar                  { LPAR                }
   | rpar                  { RPAR                }
+  | lbrack                { LBRACK              } 
+  | rbrack                { RBRACK              } 
   | pipepipe              { PIPEPIPE            }
   | equal_question        { EQUALQUESTION       }
   | lbrack_equal_question { LANGLEEQUALQUESTION }
@@ -124,11 +132,13 @@ and token = parse
   | slash                 { SLASH               }
   | langle                { LANGLE              }
   | rangle                { RANGLE              }
+  | double_ampersand      { DOUBLEAMPERSAND     }
+  | ampersand             { AMPERSAND           }
   | eof                   { EOF                 }
   (* identifiers *)
   | lowercase_id          { LOWERCASE_ID(Lexing.lexeme lexbuf)                       }
   | uppercase_id          { UPPERCASE_ID(Lexing.lexeme lexbuf)                       }
-  | "'" lowercase_id      { TYPE_VARIABLE(Lexing.lexeme lexbuf)                      }
+  | "`" lowercase_id      { TYPE_VARIABLE(Lexing.lexeme lexbuf)                      }
   | number                { INT(Int64.of_int (int_of_string (Lexing.lexeme lexbuf))) }
   | underscore            { UNDERSCORE                                               }
   (** Lexing error. *)

@@ -10,10 +10,23 @@
                                                                                                      t                         ) }
 
 %public type_:
-| con=type_constructor args=option(type_argument_apply)        { TyCon(con, list_of_list_option args) }
-| t1 = located(type_) ARROW t2 = located(type_)                { TyArrow(t1, t2)                      }
-| LPAR l = separated_nonempty_list(COMMA, located(type_)) RPAR { TyTuple(l)                           }
-| var = type_variable                                          { TyVar var                            }
+| t = simple_type                               { t               }
+| t1 = located(type_) ARROW t2 = located(type_) { TyArrow(t1, t2) }
+
+simple_type:
+| t = very_simple_type                                           { t               }
+| l = separated_twolong_list(STAR, located(very_simple_type))   { TyTuple(l)      }
+ 
+
+very_simple_type:
+| LPAR t = type_ RPAR { t }
+| var = type_variable                                   { TyVar var                            }
+| con=type_constructor args=option(type_argument_apply) { TyCon(con, list_of_list_option args) }
+ 
+
+%public type_scheme:
+| l = option(delimited(LBRACK, separated_nonempty_list(COMMA, located(type_variable)), RBRACK)) t = located(type_) { ForallTy(list_of_list_option l, t) }
+
 
 %public %inline constructor:
 | id = UPPERCASE_ID { KId id }

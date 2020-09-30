@@ -1,5 +1,10 @@
 %%
 
+%public value_definition:
+| LET id=located(identifier) s=option(preceded(COLON, located(type_scheme))) EQUAL e=located(expr) { DefineValue(SimpleValue(id, s, e)) }
+
+
+
 %public expr:
 | e = simple_expr                                         { e                                    }
 | e = control_structure                                   { e                                    }
@@ -9,6 +14,13 @@
 | f = located(simple_expr) arg=located(simple_expr)       { Apply(f, arg)                        }
 | BACKSLASH arg=located(pattern) ARROW body=located(expr) { Fun(FunctionDefinition(arg, body))   }
 | REF e=located(expr)                                     { Ref e                                }   
+
+
+function_definitions:
+| FUN l=separated_nonempty_list(AND, function_definition) { RecFunctions(l) }
+function_definition:
+| s=option(preceded(COLON, located(type_scheme))) id=located(identifier) arg = located(pattern) EQUAL e=located(expr) { (id, s, FunctionDefinition(arg, e)) }
+
 
 simple_expr:
 | e = very_simple_expr          { e }
@@ -62,7 +74,7 @@ atomic_expr:
 
 %inline prio_0:
 (* bool -> bool -> bool *)
-| p = located(ANDAND)   { Variable(with_val (binop_name ANDAND) p, None)   }
+| p = located(DOUBLEAMPERSAND)   { Variable(with_val (binop_name DOUBLEAMPERSAND) p, None)   }
 | p = located(PIPEPIPE) { Variable(with_val (binop_name PIPEPIPE) p, None) }
 
 %inline literal:

@@ -24,7 +24,7 @@
         | RANGLEEQUALQUESTION -> ">=?"
         | LANGLEQUESTION      -> "<?"
         | RANGLEQUESTION      -> ">?"
-        | ANDAND              -> "&&"
+        | DOUBLEAMPERSAND              -> "&&"
         | PIPEPIPE            -> "||"
         | _                   -> failwith "not a binop (should never be reached no matter user input)"))
 
@@ -38,8 +38,9 @@ program:
 | definitions = list(located(definition)) EOF { definitions }
 
 definition:
-| LET id=located(identifier) EQUAL e=located(expr) { DefineValue(SimpleValue(id, None, e)) }
-| type_def = define_type                           { type_def                              }
+| val_def = value_definition                                 { val_def              }
+| type_def = define_type                                     { type_def             }
+| EXTERN id=located(identifier) COLON s=located(type_scheme) { DeclareExtern(id, s) }
 
 %public identifier:
 | id=LOWERCASE_ID { Id(id) }

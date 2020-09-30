@@ -14,14 +14,14 @@
 | t1 = located(type_) ARROW t2 = located(type_) { TyArrow(t1, t2) }
 
 simple_type:
-| t = very_simple_type                                           { t               }
-| l = separated_twolong_list(STAR, located(very_simple_type))   { TyTuple(l)      }
+| t = very_simple_type                                        { t          }
+| l = separated_twolong_list(STAR, located(very_simple_type)) { TyTuple(l) }
  
 
 very_simple_type:
-| LPAR t = type_ RPAR { t }
-| var = type_variable                                   { TyVar var                            }
-| con=type_constructor args=option(type_argument_apply) { TyCon(con, list_of_list_option args) }
+| LPAR t = type_ RPAR                                     { t                                    }
+| var = type_variable                                     { TyVar var                            }
+| con = type_constructor args=option(type_argument_apply) { TyCon(con, list_of_list_option args) }
  
 
 %public type_scheme:
@@ -36,6 +36,13 @@ type_argument_declaration:
 
 type_definition:
 | option(PIPE) l=separated_nonempty_list(PIPE, sum_type_constructor_definition) { DefineSumType(l) }
+| LCBRACK l=separated_nonempty_list(COMMA, record_def) RCBRACK { DefineRecordType l }
+
+record_def:
+| label=located(label) COLON ty=located(type_) { (label, ty) }
+
+%public label:
+| id=LOWERCASE_ID { LId id }
 
 sum_type_constructor_definition:
 | c = located(constructor) args = option(sum_type_constructor_arg_list) { (c, list_of_list_option args) }

@@ -70,6 +70,7 @@ let lbrack = "["
 let rbrack = "]"
 let lcbrack = "{"
 let rcbrack = "}"
+let colon_equal = ":="
 let lowercase_id = lowercase_letter ((letter | digit | '_')*)
 let uppercase_id = uppercase_letter ((letter | digit | '_')*)
 
@@ -99,12 +100,17 @@ and token = parse
   | "let"                 { LET                 }
   | "type"                { TYPE                }
   | "fun"                 { FUN                 }
+  | "for"                 { FOR                 }
+  | "in"                  { IN                  }
   | "ref"                 { REF                 }
   | "if"                  { IF                  }
   | "else"                { ELSE                }
   | "while"               { WHILE               }
   | "extern"              { EXTERN              }
   | "and"                 { AND                 }
+  | "switch"              { SWITCH              }
+  | "do"                  { DO                  }
+  | "to"                  { TO                  }
   | lcbrack               { LCBRACK             }
   | rcbrack               { RCBRACK             }
   | backslash             { BACKSLASH           }
@@ -134,6 +140,7 @@ and token = parse
   | rangle                { RANGLE              }
   | double_ampersand      { DOUBLEAMPERSAND     }
   | ampersand             { AMPERSAND           }
+  | colon_equal           { COLONEQUAL          }
   | eof                   { EOF                 }
   (* identifiers *)
   | lowercase_id          { LOWERCASE_ID(Lexing.lexeme lexbuf)                       }

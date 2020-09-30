@@ -1,19 +1,28 @@
 %%
 
 %public value_definition:
-| LET id=located(identifier) s=option(preceded(COLON, located(type_scheme))) EQUAL e=located(expr) { DefineValue(SimpleValue(id, s, e)) }
+| LET id=located(identifier) 
+      s=option(preceded(COLON, located(type_scheme))) EQUAL 
+      e=located(expr)                                       { DefineValue(SimpleValue(id, s, e)) }
+| d = function_definitions                                  { DefineValue d                      }
 
 
 
 %public expr:
-| e = simple_expr                                         { e                                    }
-| e = control_structure                                   { e                                    }
-| e1=located(expr) SEMICOLON e2=located(expr)             { Sequence (match value e2 with
-                                                                      | Sequence l ->  e1 :: l 
-                                                                      | _          ->  [e1; e2]) }
-| f = located(simple_expr) arg=located(simple_expr)       { Apply(f, arg)                        }
-| BACKSLASH arg=located(pattern) ARROW body=located(expr) { Fun(FunctionDefinition(arg, body))   }
-| REF e=located(expr)                                     { Ref e                                }   
+| e=simple_expr                        { e                                    }
+| e=control_structure                  { e                                    }
+| e1=located(expr) SEMICOLON 
+  e2=located(expr)                     { Sequence (match value e2 with
+                                                   | Sequence l ->  e1 :: l 
+                                                   | _          ->  [e1; e2]) }
+| f=located(simple_expr) 
+  arg=located(simple_expr)             { Apply(f, arg)                        }
+| BACKSLASH arg=located(pattern) ARROW 
+            body=located(expr)         { Fun(FunctionDefinition(arg, body))   }
+| REF e=located(expr)                  { Ref e                                }
+| e1=located(simple_expr) COLONEQUAL 
+  e2=located(simple_expr)              { Assign(e1, e2)                       }
+| EXCLAMATION e=located(simple_expr)   { Read e                               }
 
 
 function_definitions:
@@ -33,8 +42,9 @@ very_simple_expr:
 very_very_simple_expr:
 | e = atomic_expr    { e }
 | LPAR e = expr RPAR { e }
-| t = tuple          { t } 
-| e = binop(very_very_simple_expr, prio_2, very_very_simple_expr) { e }
+| t = tuple          { t }
+| e=located(atomic_expr) DOT l=located(label)                     { Field(e, l) }
+| e = binop(very_very_simple_expr, prio_2, very_very_simple_expr) { e           }
 
 
 atomic_expr:
@@ -84,20 +94,46 @@ atomic_expr:
 
 
 pattern:
-| p = atomic_pattern                                               { p             }
-| LPAR  l = separated_twolong_list(COMMA, located(pattern)) RPAR   { PTuple(l)     }
-| branches = separated_twolong_list(PIPE, located(atomic_pattern)) { POr(branches) }
+| p = atomic_pattern                                                    { p                         }
+| LPAR  l=separated_twolong_list(COMMA, located(pattern)) RPAR          { PTuple(l)                 }
+| branches = separated_twolong_list(PIPE, located(atomic_pattern))      { POr(branches)             }
+| branches = separated_twolong_list(AMPERSAND, located(atomic_pattern)) { PAnd(branches)            }
+
+
+record_pattern:
+| l=located(label) EQUAL p=located(pattern) { (l, p) }
 
 atomic_pattern:
-| UNDERSCORE               { PWildcard }
+| LPAR p = pattern RPAR    { p             }
+| c=located(constructor)
+  targs=option(type_argument_apply)
+  l=option(delimited(LPAR, 
+                     separated_nonempty_list(COMMA, located(pattern)), 
+                     RPAR))                                              { PTaggedValue(c, targs, list_of_list_option l) }
+| UNDERSCORE               { PWildcard     }
 | id = located(identifier) { PVariable id  }
 | lit = located(literal)   { PLiteral lit  }
+| LCBRACK  l=separated_nonempty_list(COMMA, record_pattern) RCBRACK 
+           t = option(type_argument_apply)                              { PRecord(l, t)             }
 
 
 control_structure:
-| IF LPAR cond=located(expr) RPAR LCBRACK body1=located(expr) RCBRACK ELSE LCBRACK body2=located(expr) RCBRACK { IfThenElse(cond, body1, body2) }
-| WHILE LPAR cond=located(expr) RPAR LCBRACK body=located(expr) RCBRACK { While(cond, body) }
-| SWITCH LPAR cond=located(expr) RPAR LCBRACK cases=switch_cases RCBRACK { Case(cond, cases) }
+| IF LPAR cond=located(expr) RPAR 
+  LCBRACK body1=located(expr) RCBRACK 
+  ELSE 
+  LCBRACK body2=located(expr) RCBRACK    { IfThenElse(cond, body1, body2) }
+| FOR     id=located(identifier) IN 
+  LPAR    e1=located(expr) 
+    TO    e2=located(expr) 
+  RPAR
+  LCBRACK body=located(expr) RCBRACK     { For(id, e1, e2, body) }
+
+| WHILE LPAR cond=located(expr) RPAR 
+  LCBRACK    body=located(expr) RCBRACK  { While(cond, body) }
+| DO LCBRACK body=located(expr) RCBRACK 
+  WHILE LPAR cond=located(expr) RPAR     { While(cond, body) }
+| SWITCH LPAR cond=located(expr) RPAR 
+  LCBRACK     cases=switch_cases RCBRACK { Case(cond, cases) }
 
 switch_cases:
 | option(PIPE) cases=separated_nonempty_list(PIPE, located(switch_branch)) { cases }

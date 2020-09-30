@@ -23,6 +23,7 @@
 %token         WHILE
 %token         DO
 %token         FOR
+%token         IN
 %token         TO
 %token         SWITCH
 
@@ -30,6 +31,7 @@
 
 %token         SEMICOLON
 
+%token         COLONEQUAL
 %token         DOUBLEAMPERSAND
 %token         PIPEPIPE
 %token         EQUALQUESTION

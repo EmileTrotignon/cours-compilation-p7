@@ -19,9 +19,26 @@
 )
 
 (ocamllex fopixLexer hopixLexer hobixLexer retrolixLexer)
+
 (menhir
-  (modules fopixParser hopixParser hobixParser retrolixParser)
+  (modules hopixParserTokens)
+  (flags --only-tokens)
+)
+
+(menhir
+  (modules hopixParser hopixTypeParser hopixParserTokens hopixExprParser)
+  (merge_into hopixParser)
   (infer true)
-  (flags --explain --table))
+  (flags 
+    --external-tokens HopixParserTokens 
+    --explain 
+    --table))
+
+(menhir
+  (modules fopixParser hobixParser retrolixParser)
+  (infer true)
+  (flags 
+    --explain 
+    --table))
 
 (env (dev (flags (:standard -warn-error -A -w -9 -w -32))))

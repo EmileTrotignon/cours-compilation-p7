@@ -6,8 +6,17 @@ module AST = HopixAST
 
 type ast = HopixAST.t
 
+let process ~lexer_init ~lexer_fun ~parser_fun ~input  = 
+  let buf = lexer_init input in
+  let lexer_init' _ = buf in
+  try
+    SyntacticAnalysis.process ~lexer_init:lexer_init' ~lexer_fun ~parser_fun ~input
+  with
+    | _ ->
+      Error.error "parsing"  (Position.cpos buf) "Syntax error."
+
 let parse lexer_init input =
-  SyntacticAnalysis.process
+  process
     ~lexer_init
     ~lexer_fun:HopixLexer.token
     ~parser_fun:HopixParser.program
@@ -19,7 +28,7 @@ let parse_filename filename =
     |> Sexplib.Sexp.of_string
     |> HopixAST.program_of_sexp
   else
-    parse Lexing.from_channel (open_in filename)
+    parse (Lexing.from_channel ~with_positions:true) (open_in filename)
 
 let extension =
   ".hopix"

@@ -3,8 +3,6 @@
 open Sexplib.Std
 open Position
 
-
-
 (** A program is a list of definitions. *)
 type program = definition located list
 [@@deriving sexp]
@@ -88,7 +86,7 @@ and type_arguments =
 
 and pattern =
   (** A pattern which is simply an identifier. *)
-  | PVariable of identifier located
+  | PVariable of identifier located 
   (** A wildcard pattern [_]. *)
   | PWildcard
   (** A pattern with a type annotation of type form [p : ty] *)
@@ -129,6 +127,8 @@ and literal =
   | LString of string
   | LChar   of char
 
+
+
 and identifier =
   | Id of string
 
@@ -138,13 +138,14 @@ and type_constructor =
 and type_variable =
   | TId of string
 
-and constructor =
+  and constructor =
   | KId of string
 
 and label =
   | LId of string
 
 and t = program
+
 
 [@@deriving sexp]
 

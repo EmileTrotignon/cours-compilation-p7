@@ -1,8 +1,1 @@
-let main =
-  switch (some_value) {
-  | Some ({ box = _, other_box = 
-    (Some (_) 
-    | 
-    got_you) }) -> got_you
-  | None -> None
-  }
+let cycle_of_life = lion eats giraffe eats grass eats lion

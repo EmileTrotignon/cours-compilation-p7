@@ -20,7 +20,7 @@ let parse lexer_init input =
     ~lexer_init
     ~lexer_fun:(fun buf -> 
       let tok = HopixLexer.token buf in 
-      (*Printf.printf "%s\n" (HopixASTHelper.string_of_token tok) ;*)
+      (* Printf.printf "%s\n" (HopixASTHelper.string_of_token tok) ;*)
       tok)
     ~parser_fun:HopixParser.program
     ~input

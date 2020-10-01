@@ -4,16 +4,23 @@ let fresh_identifier =
   let count = ref (-1) in
   fun () -> incr count; Id ("id" ^ string_of_int !count)
 
-
+  let expr_of_apply_list l =
+        
+    let rec aux l =
+        match l with
+        | [] -> failwith "should never happen"
+        | [x] -> x
+        | x :: xs -> 
+            let located_xs = aux xs in 
+            Position.{value=Apply(located_xs, x); position=join located_xs.position x.position}
+    in
+    Position.value (aux (List.rev l))
 
   let string_of_token token =
     HopixParserTokens.(
     match token with
     | LOWERCASE_ID(s) -> sprintf "LOWERCASE_ID(%s)" s
     | UPPERCASE_ID(s) -> sprintf "UPPERCASE_ID(%s)" s
-    | CONSTR_ID(s) -> sprintf "CONSTR_ID(%s)" s
-    | LABEL_ID(s) -> sprintf "LABEL_ID(%s)" s
-    | TYPE_CON(s) -> sprintf "TYPE_CON(%s)" s
     | TYPE_VARIABLE(s) -> sprintf "TYPE_VARIABLE(%s)" s
     | INT(i) -> sprintf "INT(%d)" (Int64.to_int i)
     | CHAR(c) -> sprintf "INT(%c)" c
@@ -54,6 +61,13 @@ let fresh_identifier =
     | COMMA -> "COMMA"
     | LPAR -> "LPAR"
     | RPAR -> "RPAR"
+    | LBRACK -> "LBRACK"
+    | RBRACK -> "RBRACK"
+    | IN     -> "IN"
+    | FUN -> "FUN"
+    | EXTERN -> "EXTERN"
+    | COLONEQUAL -> "COLONEQUAL"
+    | AMPERSAND -> "AMPERSAND"
     | LCBRACK -> "LCBRACK"
     | RCBRACK -> "RCBRACK"
     | EOF -> "EOF")

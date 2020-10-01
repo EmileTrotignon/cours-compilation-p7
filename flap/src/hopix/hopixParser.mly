@@ -51,3 +51,6 @@ definition:
 %public separated_twolong_list(SEP, ELE):
  e1=ELE SEP l=separated_nonempty_list(SEP, ELE) { e1 :: l }
 
+%public twolong_list(ELE):
+ e1=ELE l=nonempty_list(ELE) { e1 :: l }
+

@@ -15,15 +15,13 @@
   e2=located(expr)                     { Sequence (match value e2 with
                                                    | Sequence l ->  e1 :: l 
                                                    | _          ->  [e1; e2]) }
-| f=located(simple_expr) 
-  arg=located(simple_expr)             { Apply(f, arg)                        }
 | BACKSLASH arg=located(pattern) ARROW 
             body=located(expr)         { Fun(FunctionDefinition(arg, body))   }
 | REF e=located(expr)                  { Ref e                                }
 | e1=located(simple_expr) COLONEQUAL 
   e2=located(simple_expr)              { Assign(e1, e2)                       }
 | EXCLAMATION e=located(simple_expr)   { Read e                               }
-
+| l=twolong_list(located(simple_expr)) { HopixASTHelper.expr_of_apply_list l  }
 
 function_definitions:
 | FUN l=separated_nonempty_list(AND, function_definition) { RecFunctions(l) }
@@ -32,8 +30,9 @@ function_definition:
 
 
 simple_expr:
-| e = very_simple_expr          { e }
-| e = binop(simple_expr, prio_0, simple_expr) { e }
+| e = very_simple_expr                        { e             }
+
+| e = binop(simple_expr, prio_0, simple_expr) { e             }
 
 very_simple_expr:
 | e = very_very_simple_expr { e }

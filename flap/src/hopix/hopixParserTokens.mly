@@ -1,8 +1,5 @@
 %token<string> LOWERCASE_ID
 %token<string> UPPERCASE_ID
-%token<string> CONSTR_ID
-%token<string> LABEL_ID
-%token<string> TYPE_CON
 %token<string> TYPE_VARIABLE
 %token<Mint.t> INT
 %token<char>   CHAR
@@ -50,7 +47,6 @@
 %token         SLASH
 %token         ARROW
 %token         COMMA
-
 
 %token         LANGLE
 %token         RANGLE

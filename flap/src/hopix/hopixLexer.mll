@@ -9,7 +9,7 @@
     f lexbuf
   
   let char_of_string_atom atom =
-   " " 
+    atom.[0]
 
   let error lexbuf =
     error "during lexing" (lex_join lexbuf.lex_start_p lexbuf.lex_curr_p)
@@ -85,7 +85,11 @@ rule comment depth = parse
   | _         { comment depth lexbuf              }
 
 and string accumulator = parse
- | "\""        { STRING(String.concat "" (List.map char_of_string_atom (List.rev accumulator))) }
+ | "\""        { STRING(
+                  String.of_seq 
+                    (List.to_seq 
+                      (List.map char_of_string_atom 
+                        (List.rev accumulator)))) }
  | string_atom { string ((Lexing.lexeme lexbuf) :: accumulator) lexbuf                          }
 
 and token = parse

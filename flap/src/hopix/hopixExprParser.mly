@@ -1,54 +1,70 @@
 %%
 
 %public value_definition:
-| LET id=located(identifier) 
-      s=option(preceded(COLON, located(type_scheme))) EQUAL 
-      e=located(expr)                                       { DefineValue(SimpleValue(id, s, e)) }
-| d = function_definitions                                  { DefineValue d                      }
+| v = vdefinition { DefineValue v }
 
+vdefinition:
+| LET   id=located(identifier) 
+        s=option(preceded(COLON, located(type_scheme))) 
+  EQUAL e=located(expr)                                 { SimpleValue(id, s, e) }
+| d = function_definitions                              { d                     }
 
-
-%public expr:
-| e=simple_expr                        { e                                    }
-| e=control_structure                  { e                                    }
-| e1=located(expr) SEMICOLON 
-  e2=located(expr)                     { Sequence (match value e2 with
-                                                   | Sequence l ->  e1 :: l 
-                                                   | _          ->  [e1; e2]) }
-| BACKSLASH arg=located(pattern) ARROW 
-            body=located(expr)         { Fun(FunctionDefinition(arg, body))   }
-| REF e=located(expr)                  { Ref e                                }
-| e1=located(simple_expr) COLONEQUAL 
-  e2=located(simple_expr)              { Assign(e1, e2)                       }
-| EXCLAMATION e=located(simple_expr)   { Read e                               }
-| l=twolong_list(located(simple_expr)) { HopixASTHelper.expr_of_apply_list l  }
+simple_vdefinition:
+| LET   id=located(identifier) 
+        s=option(preceded(COLON, located(type_scheme))) 
+  EQUAL e=located(nodef_expr)                           { SimpleValue(id, s, e) }
+| d = simple_function_definitions                              { d                     }
 
 function_definitions:
 | FUN l=separated_nonempty_list(AND, function_definition) { RecFunctions(l) }
 function_definition:
 | s=option(preceded(COLON, located(type_scheme))) id=located(identifier) arg = located(pattern) EQUAL e=located(expr) { (id, s, FunctionDefinition(arg, e)) }
 
+simple_function_definitions:
+| FUN l=separated_nonempty_list(AND, simple_function_definition) { RecFunctions(l) }
+simple_function_definition:
+| s=option(preceded(COLON, located(type_scheme))) id=located(identifier) arg = located(pattern) EQUAL e=located(nodef_expr) { (id, s, FunctionDefinition(arg, e)) }
+
+
+%public expr:
+| v=simple_vdefinition SEMICOLON
+  e=located(nodef_expr)   { Define(v, e) }
+| e=nodef_expr            { e            }
+| e1=located(nodef_expr) SEMICOLON 
+  e2=located(nodef_expr)                     { Sequence (match value e2 with
+                                                   | Sequence l ->  e1 :: l 
+                                                   | _          ->  [e1; e2]) }
+
+nodef_expr:
+| e=simple_expr                        { e                                    }
+| e=control_structure                  { e                                    }
+| BACKSLASH arg=located(pattern) ARROW 
+            body=located(nodef_expr)         { Fun(FunctionDefinition(arg, body))   }
+| REF e=located(nodef_expr)                  { Ref e                                }
+| e1=located(simple_expr) COLONEQUAL 
+  e2=located(simple_expr)              { Assign(e1, e2)                       }
+| EXCLAMATION e=located(simple_expr)   { Read e                               }
+| l=twolong_list(located(simple_expr)) { HopixASTHelper.expr_of_apply_list l  }
+
 
 simple_expr:
 | e = very_simple_expr                        { e             }
-
 | e = binop(simple_expr, prio_0, simple_expr) { e             }
 
 very_simple_expr:
 | e = very_very_simple_expr { e }
-| e = binop(very_very_simple_expr, prio_1, very_very_simple_expr) { e }
+| e = binop(very_simple_expr, prio_1, very_simple_expr) { e }
 
 very_very_simple_expr:
 | e = atomic_expr    { e }
-| LPAR e = expr RPAR { e }
-| t = tuple          { t }
-| e=located(atomic_expr) DOT l=located(label)                     { Field(e, l) }
 | e = binop(very_very_simple_expr, prio_2, very_very_simple_expr) { e           }
 
-
 atomic_expr:
-| v = variable                                { v         }
-| l = located(literal)                        { Literal l }
+| t = tuple                                   { t           }
+| e=located(atomic_expr) DOT l=located(label) { Field(e, l) }
+| LPAR e = expr RPAR                          { e           }
+| v = variable                                { v           }
+| l = located(literal)                        { Literal l   }
 | const = located(constructor) type_args=option(type_argument_apply) args=ioption(constructor_arguments) 
                                               { Tagged(const, type_args, list_of_list_option args) }
 

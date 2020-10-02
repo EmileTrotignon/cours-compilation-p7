@@ -1,1 +1,1 @@
-let cycle_of_life = lion eats giraffe eats grass eats lion
+let main = fun ping _ = (pong 0) and pong _ = (ping 0) ; ping 0

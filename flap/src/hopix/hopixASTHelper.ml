@@ -1,11 +1,13 @@
 open HopixAST
 open Printf
+
+(*int -> (int -> int)*)
+
 let fresh_identifier =
   let count = ref (-1) in
   fun () -> incr count; Id ("id" ^ string_of_int !count)
 
   let expr_of_apply_list l =
-        
     let rec aux l =
         match l with
         | [] -> failwith "should never happen"

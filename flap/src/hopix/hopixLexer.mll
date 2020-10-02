@@ -7,16 +7,28 @@
   let next_line_and f lexbuf  =
     Lexing.new_line lexbuf;
     f lexbuf
+    
+  let unqote s =
+     String.sub s 1 ((String.length s) - 2)
   
-  let char_of_string_atom atom =
-    atom.[0]
+  let char_of_atom atom =
+      match atom with 
+      |{|\n|} -> '\n'
+      |{|\t|} -> '\t'
+      |{|\b|} -> '\b'
+      |{|\r|} -> '\r'
+      |{|\\|} -> '\\'
+      |{|\'|} -> '\'' 
+      |{|\"|} -> '"' 
+      | _ when String.length atom = 1 -> atom.[0]
+      | _ when atom.[0] = {|\|}.[0]   -> Char.chr(int_of_string(String.sub atom 1 ((String.length atom) - 1)))
+      | _                             -> failwith "non"
 
   let error lexbuf =
     error "during lexing" (lex_join lexbuf.lex_start_p lexbuf.lex_curr_p)
 
 (*
-  let unqote s =
-    String.sub s 1 (String.length (s - 2))
+ 
 
   let get_char_quoted s =
     let s' = String.sub s 1 (String.length (s - 2))
@@ -27,16 +39,16 @@
 }
 
 let digit = ['0' - '9']
+let hexdigit = digit | ['a' - 'f'] | ['A' - 'F']
 let lowercase_letter = ['a' - 'z']
 let uppercase_letter = ['A' - 'Z']
 let letter = lowercase_letter | uppercase_letter
 let newline = ('\010' | '\013' | "\013\010")
 let blank   = [' ' '\009' '\012']
-(*let atom_code = ('\' digit (digit ?)  (digit ?))
-let atom_raw = ()*)
+let atom_code = ('\\' digit (digit ?)  (digit ?)) | ("\\0x" hexdigit (hexdigit ?)  (hexdigit ?))
 let underscore = "_"
 let printable = [' ' - '~']
-let atom = printable
+let atom = printable | atom_code | "\\t"
 let string_atom = atom
 let char = "'" atom "'"
 let lpar = "("
@@ -88,7 +100,7 @@ and string accumulator = parse
  | "\""        { STRING(
                   String.of_seq 
                     (List.to_seq 
-                      (List.map char_of_string_atom 
+                      (List.map char_of_atom 
                         (List.rev accumulator)))) }
  | string_atom { string ((Lexing.lexeme lexbuf) :: accumulator) lexbuf                          }
 
@@ -98,7 +110,7 @@ and token = parse
   | blank+                { token lexbuf               }
   | open_com              { comment 0 lexbuf           }
   (* char *)
-  | "'" printable "'"     { CHAR(Lexing.lexeme_char lexbuf 1)   }
+  | "'" atom "'"     { CHAR (char_of_atom (unqote(Lexing.lexeme lexbuf)))   }
   | "\""                  { string [] lexbuf                    }
   (* atomic lexemes *)
   | "let"                 { LET                 }

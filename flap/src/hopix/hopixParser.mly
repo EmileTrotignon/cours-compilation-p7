@@ -1,6 +1,7 @@
 %{ (* -*- tuareg -*- *)
 
   open HopixAST
+  open HopixParserHelper
   open Position
   open HopixParserTokens
   

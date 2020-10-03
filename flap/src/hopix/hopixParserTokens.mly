@@ -61,10 +61,11 @@
 
 %right UPPERCASE_ID
 %left LPAR
+%left COLON
 
 %left COMMA
 %right SEMICOLON
-%left ARROW
+%right ARROW
 
 %left REF
 

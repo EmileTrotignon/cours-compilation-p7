@@ -27,56 +27,71 @@ simple_function_definition:
 
 
 %public expr:
-| v=simple_vdefinition SEMICOLON
-  e=located(nodef_expr)   { Define(v, e) }
-| e=nodef_expr            { e            }
-| e1=located(nodef_expr) SEMICOLON 
-  e2=located(nodef_expr)                     { Sequence (match value e2 with
-                                                   | Sequence l ->  e1 :: l 
-                                                   | _          ->  [e1; e2]) }
+| e=nodef_expr { e }
+| e1=located(nodef_expr) SEMICOLON e2=located(expr) { Sequence ([e1; e2]) }
+| d=simple_vdefinition SEMICOLON e=located(expr) { Define(d, e) }
 
 nodef_expr:
-| e=simple_expr                        { e                                    }
+| e=binop_prio_0_expr                        { e                                    }
 | e=control_structure                  { e                                    }
 | BACKSLASH arg=located(pattern) ARROW 
-            body=located(nodef_expr)         { Fun(FunctionDefinition(arg, body))   }
-| REF e=located(nodef_expr)                  { Ref e                                }
-| e1=located(simple_expr) COLONEQUAL 
-  e2=located(simple_expr)              { Assign(e1, e2)                       }
-| EXCLAMATION e=located(simple_expr)   { Read e                               }
-| l=twolong_list(located(simple_expr)) { HopixASTHelper.expr_of_apply_list l  }
+            body=located(nodef_expr)   { Fun(FunctionDefinition(arg, body))   }
+| e1=located(binop_prio_0_expr) COLONEQUAL 
+  e2=located(binop_prio_0_expr)              { Assign(e1, e2)                       }
 
+binop_prio_0_expr:
+| e = binop_prio_1_expr                                   { e }
+| e = binop(binop_prio_0_expr, prio_0, binop_prio_0_expr) { e }
 
-simple_expr:
-| e = very_simple_expr                        { e             }
-| e = binop(simple_expr, prio_0, simple_expr) { e             }
+binop_prio_1_expr:
+| e = binop_prio_2_expr                                   { e }
+| e = binop(binop_prio_1_expr, prio_1, binop_prio_1_expr) { e }
 
-very_simple_expr:
-| e = very_very_simple_expr { e }
-| e = binop(very_simple_expr, prio_1, very_simple_expr) { e }
+binop_prio_2_expr:
+| e = apply_expr                                          { e }
+| e = binop(binop_prio_2_expr, prio_2, binop_prio_2_expr) { e }
 
-very_very_simple_expr:
-| e = atomic_expr    { e }
-| e = binop(very_very_simple_expr, prio_2, very_very_simple_expr) { e           }
+apply_expr:
+| e = ref_deref_expr                      { e                                    }
+| l=twolong_list(located(ref_deref_expr)) { HopixASTHelper.expr_of_apply_list l  }
+
+ref_deref_expr:
+| REF e=located(atomic_expr)           { Ref e                                 }
+| EXCLAMATION e=located(atomic_expr)   { Read e                                }
+| e = atomic_expr                      { e                                     }
+
 
 atomic_expr:
-| t = tuple                                   { t           }
-| e=located(atomic_expr) DOT l=located(label) { Field(e, l) }
-| LPAR e = expr RPAR                          { e           }
-| v = variable                                { v           }
-| l = located(literal)                        { Literal l   }
-| const = located(constructor) type_args=option(type_argument_apply) args=ioption(constructor_arguments) 
-                                              { Tagged(const, type_args, list_of_list_option args) }
+| r = record                            { r                    }
+| t = tuple                             { t                    }
+| e=located(atomic_expr) DOT 
+  l=located(label)                      { Field(e, l)          }
+| LPAR e=expr RPAR                      { e                    }
+| LPAR e=located(expr) 
+       COLON 
+       t=located(type_) 
+  RPAR                                  { TypeAnnotation(e, t) }
+| v=variable                            { v                    }
+| l=located(literal)                    { Literal l            }
+| const=located(constructor) 
+  type_args=option(type_argument_apply) 
+  args=ioption(constructor_arguments)   { Tagged(const, type_args, list_of_list_option args) }
 
 %inline constructor_arguments:
-| LPAR l=separated_nonempty_list(COMMA, located(simple_expr)) RPAR { l }
+| LPAR l=separated_nonempty_list(COMMA, located(binop_prio_0_expr)) RPAR { l }
 
 %inline tuple:
-| LPAR  l = separated_twolong_list(COMMA, located(simple_expr)) RPAR { Tuple(l) }
-
+| LPAR  l = separated_twolong_list(COMMA, located(binop_prio_0_expr)) RPAR { Tuple(l) }
 
 %inline variable:
 | id = located(identifier) types=option(type_argument_apply) { Variable (id, types) }
+
+%inline record:
+| LCBRACK 
+    l=separated_nonempty_list(COMMA, record_expr_member) 
+  RCBRACK 
+  types=option(type_argument_apply)                      { Record(l, types) }
+
 
 %inline binop(E1, OP, E2):
 | e1 = located(E1) b = located(OP) e2 = located(E2) { Apply({value=Apply(b, e1); position= join e1.position e2.position},
@@ -108,17 +123,24 @@ atomic_expr:
 | i = INT    { LInt i    }
 
 
+record_expr_member:
+| label=located(label) EQUAL e=located(nodef_expr) { (label, e) }
+
 pattern:
-| p = atomic_pattern                                                    { p                         }
-| LPAR  l=separated_twolong_list(COMMA, located(pattern)) RPAR          { PTuple(l)                 }
-| branches = separated_twolong_list(PIPE, located(atomic_pattern))      { POr(branches)             }
-| branches = separated_twolong_list(AMPERSAND, located(atomic_pattern)) { PAnd(branches)            }
+| p=atomic_pattern                                                      { p                     }
+| p=located(atomic_pattern) COLON t=located(type_)                      { PTypeAnnotation(p, t) }
+| LPAR  l=separated_twolong_list(COMMA, located(pattern)) RPAR          { PTuple(l)             }
+| branches = separated_twolong_list(PIPE, located(atomic_pattern))      { POr(branches)         }
+| branches = separated_twolong_list(AMPERSAND, located(atomic_pattern)) { PAnd(branches)        }
+
+
 
 
 record_pattern:
 | l=located(label) EQUAL p=located(pattern) { (l, p) }
 
 atomic_pattern:
+(* Not in the grammar as is. Permited by the tuple rule. *)
 | LPAR p = pattern RPAR    { p             }
 | c=located(constructor)
   targs=option(type_argument_apply)
@@ -130,6 +152,8 @@ atomic_pattern:
 | lit = located(literal)   { PLiteral lit  }
 | LCBRACK  l=separated_nonempty_list(COMMA, record_pattern) RCBRACK 
            t = option(type_argument_apply)                              { PRecord(l, t)             }
+
+
 
 
 control_structure:

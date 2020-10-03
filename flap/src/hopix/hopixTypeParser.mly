@@ -1,7 +1,10 @@
 %%
 
 %public type_argument_apply:
+(* according to spec, this should be 
 | LANGLE args = separated_nonempty_list(COMMA, located(type_)) RANGLE { args }
+Is not because of test 47-instanciation.bad *)
+| LANGLE args = separated_list(COMMA, located(type_)) RANGLE { args }
 
 
 %public define_type:
@@ -25,7 +28,7 @@ very_simple_type:
  
 
 %public type_scheme:
-| l = option(delimited(LBRACK, separated_nonempty_list(COMMA, located(type_variable)), RBRACK)) t = located(type_) { ForallTy(list_of_list_option l, t) }
+| l = option(delimited(LBRACK, nonempty_list(located(type_variable)), RBRACK)) t = located(type_) { ForallTy(list_of_list_option l, t) }
 
 
 %public %inline constructor:

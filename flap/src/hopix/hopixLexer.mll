@@ -48,8 +48,10 @@ let blank   = [' ' '\009' '\012']
 let atom_code = ('\\' digit (digit ?)  (digit ?)) | ("\\0x" hexdigit (hexdigit ?)  (hexdigit ?))
 let underscore = "_"
 let printable = [' ' - '~']
-let atom = printable | atom_code | "\\t"
-let string_atom = atom
+let char_printable = [' ' - '&' '(' - '~']
+let string_printable = [' ' - '!' '#' - '~']
+let atom = char_printable | atom_code | "\\t" | "\\r" | "\\b" | "\\n" | "\\'" | "\\\\"
+let string_atom = string_printable | atom_code | "\\t" | "\\r" | "\\b" | "\\n" | "\\\"" | "\\\\"
 let char = "'" atom "'"
 let lpar = "("
 let rpar = ")"
@@ -86,7 +88,7 @@ let colon_equal = ":="
 let lowercase_id = lowercase_letter ((letter | digit | '_')*)
 let uppercase_id = uppercase_letter ((letter | digit | '_')*)
 
-let number = '-'? ((digit+) | "0x" ['0' - '9' 'a' - 'f' 'A' - 'F'])
+let number = '-'? ((digit+) | ("0x" (hexdigit+)) | ("0b" (('0' | '1')+)) | ("0o" (['0' - '7']+))) 
 
 rule comment depth = parse
   | open_com  { comment (depth + 1) lexbuf        }
@@ -112,6 +114,7 @@ and token = parse
   (* char *)
   | "'" atom "'"     { CHAR (char_of_atom (unqote(Lexing.lexeme lexbuf)))   }
   | "\""                  { string [] lexbuf                    }
+  | number                { INT(Int64.of_int (int_of_string (Lexing.lexeme lexbuf))) }
   (* atomic lexemes *)
   | "let"                 { LET                 }
   | "type"                { TYPE                }
@@ -162,7 +165,6 @@ and token = parse
   | lowercase_id          { LOWERCASE_ID(Lexing.lexeme lexbuf)                       }
   | uppercase_id          { UPPERCASE_ID(Lexing.lexeme lexbuf)                       }
   | "`" lowercase_id      { TYPE_VARIABLE(Lexing.lexeme lexbuf)                      }
-  | number                { INT(Int64.of_int (int_of_string (Lexing.lexeme lexbuf))) }
   | underscore            { UNDERSCORE                                               }
   (** Lexing error. *)
   | _               { error lexbuf "unexpected character." }

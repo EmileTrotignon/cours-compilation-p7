@@ -7,16 +7,27 @@ let fresh_identifier =
   let count = ref (-1) in
   fun () -> incr count; Id ("id" ^ string_of_int !count)
 
-  let expr_of_apply_list l =
-    let rec aux l =
-        match l with
-        | [] -> failwith "should never happen"
-        | [x] -> x
-        | x :: xs -> 
-            let located_xs = aux xs in 
-            Position.{value=Apply(located_xs, x); position=join located_xs.position x.position}
+let expr_of_apply_list l =
+  let rec aux l =
+      match l with
+      | [] -> failwith "should never happen"
+      | [x] -> x
+      | x :: xs -> 
+          let located_xs = aux xs in 
+          Position.{value=Apply(located_xs, x); position=join located_xs.position x.position}
+  in
+  Position.value (aux (List.rev l))
+
+let define_of_list l e =
+  let rec aux l =
+    match l with
+    | [] -> failwith "should never happen"
+    | [x] -> Position.{value=Define(x, e); position=e.position}
+    | x :: xs ->
+      let located_xs = aux xs in
+      Position.{value = Define(x, located_xs); position=located_xs.position}
     in
-    Position.value (aux (List.rev l))
+    Position.value (aux l)
 
   let string_of_token token =
     HopixParserTokens.(

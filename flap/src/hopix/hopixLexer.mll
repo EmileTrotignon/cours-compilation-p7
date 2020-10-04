@@ -3,29 +3,8 @@
   open Error
   open Position
   open HopixParserTokens
+  open HopixLexerHelper
 
-  let next_line_and f lexbuf  =
-    Lexing.new_line lexbuf;
-    f lexbuf
-    
-  let unqote s =
-     String.sub s 1 ((String.length s) - 2)
-  
-  let char_of_atom atom =
-      match atom with 
-      |{|\n|} -> '\n'
-      |{|\t|} -> '\t'
-      |{|\b|} -> '\b'
-      |{|\r|} -> '\r'
-      |{|\\|} -> '\\'
-      |{|\'|} -> '\'' 
-      |{|\"|} -> '"' 
-      | _ when String.length atom = 1 -> atom.[0]
-      | _ when atom.[0] = {|\|}.[0]   -> Char.chr(int_of_string(String.sub atom 1 ((String.length atom) - 1)))
-      | _                             -> failwith "non"
-
-  let error lexbuf =
-    error "during lexing" (lex_join lexbuf.lex_start_p lexbuf.lex_curr_p)
 
 (*
  
@@ -45,7 +24,7 @@ let uppercase_letter = ['A' - 'Z']
 let letter = lowercase_letter | uppercase_letter
 let newline = ('\010' | '\013' | "\013\010")
 let blank   = [' ' '\009' '\012']
-let atom_code = ('\\' digit (digit ?)  (digit ?)) | ("\\0x" hexdigit (hexdigit ?)  (hexdigit ?))
+let atom_code = ('\\' digit (digit ?)  (digit ?)) | ("\\0x" hexdigit (hexdigit ?))
 let underscore = "_"
 let printable = [' ' - '~']
 let char_printable = [' ' - '&' '(' - '~']
@@ -102,9 +81,10 @@ and string accumulator = parse
  | "\""        { STRING(
                   String.of_seq 
                     (List.to_seq 
-                      (List.map char_of_atom 
+                      (List.map (char_of_atom lexbuf)
                         (List.rev accumulator)))) }
  | string_atom { string ((Lexing.lexeme lexbuf) :: accumulator) lexbuf                          }
+ | eof         { error "during lexing" (Position.cpos lexbuf) "Unterminated string."            }
 
 and token = parse
   (** Layout *)
@@ -112,9 +92,12 @@ and token = parse
   | blank+                { token lexbuf               }
   | open_com              { comment 0 lexbuf           }
   (* char *)
-  | "'" atom "'"     { CHAR (char_of_atom (unqote(Lexing.lexeme lexbuf)))   }
+  | "'" atom "'"          { CHAR (char_of_atom lexbuf (unqote(Lexing.lexeme lexbuf)))   }
   | "\""                  { string [] lexbuf                    }
-  | number                { INT(Int64.of_int (int_of_string (Lexing.lexeme lexbuf))) }
+  | number                { try
+                              INT(Int64.of_int (int_of_string (Lexing.lexeme lexbuf))) 
+                            with
+                              Failure "int_of_string" -> global_error "during parsing" "Syntax error."}
   (* atomic lexemes *)
   | "let"                 { LET                 }
   | "type"                { TYPE                }
@@ -167,5 +150,5 @@ and token = parse
   | "`" lowercase_id      { TYPE_VARIABLE(Lexing.lexeme lexbuf)                      }
   | underscore            { UNDERSCORE                                               }
   (** Lexing error. *)
-  | _               { error lexbuf "unexpected character." }
+  | _               { error "during lexing" (Position.cpos lexbuf) "unexpected character." }
 

@@ -133,9 +133,6 @@ pattern:
 | branches = separated_twolong_list(PIPE, located(atomic_pattern))      { POr(branches)         }
 | branches = separated_twolong_list(AMPERSAND, located(atomic_pattern)) { PAnd(branches)        }
 
-
-
-
 record_pattern:
 | l=located(label) EQUAL p=located(pattern) { (l, p) }
 

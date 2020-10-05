@@ -13,31 +13,37 @@ simple_vdefinition:
 | LET   id=located(identifier) 
         s=option(preceded(COLON, located(type_scheme))) 
   EQUAL e=located(nodef_expr)                           { SimpleValue(id, s, e) }
-| d = simple_function_definitions                              { d                     }
+| d = simple_function_definitions                       { d                     }
 
 function_definitions:
 | FUN l=separated_nonempty_list(AND, function_definition) { RecFunctions(l) }
 function_definition:
-| s=option(preceded(COLON, located(type_scheme))) id=located(identifier) arg = located(pattern) EQUAL e=located(expr) { (id, s, FunctionDefinition(arg, e)) }
+| s=option(preceded(COLON, located(type_scheme))) 
+  id=located(identifier) 
+  arg = located(pattern) EQUAL 
+  e=located(expr)                                 { (id, s, FunctionDefinition(arg, e)) }
 
 simple_function_definitions:
 | FUN l=separated_nonempty_list(AND, simple_function_definition) { RecFunctions(l) }
 simple_function_definition:
-| s=option(preceded(COLON, located(type_scheme))) id=located(identifier) arg = located(pattern) EQUAL e=located(nodef_expr) { (id, s, FunctionDefinition(arg, e)) }
+| s=option(preceded(COLON, located(type_scheme))) 
+  id=located(identifier) 
+  arg=located(pattern) EQUAL 
+  e=located(nodef_expr)                           { (id, s, FunctionDefinition(arg, e)) }
 
 
 %public expr:
-| e=nodef_expr { e }
+| e=nodef_expr                                      { e                   }
 | e1=located(nodef_expr) SEMICOLON e2=located(expr) { Sequence ([e1; e2]) }
-| d=simple_vdefinition SEMICOLON e=located(expr) { Define(d, e) }
+| d=simple_vdefinition SEMICOLON e=located(expr)    { Define(d, e)        }
 
 nodef_expr:
-| e=binop_prio_0_expr                        { e                                    }
-| e=control_structure                  { e                                    }
+| e=binop_prio_0_expr                      { e                                    }
+| e=control_structure                      { e                                    }
 | BACKSLASH arg=located(pattern) ARROW 
-            body=located(nodef_expr)   { Fun(FunctionDefinition(arg, body))   }
+            body=located(nodef_expr)       { Fun(FunctionDefinition(arg, body))   }
 | e1=located(binop_prio_0_expr) COLONEQUAL 
-  e2=located(binop_prio_0_expr)              { Assign(e1, e2)                       }
+  e2=located(binop_prio_0_expr)            { Assign(e1, e2)                       }
 
 binop_prio_0_expr:
 | e = binop_prio_1_expr                                   { e }
@@ -84,7 +90,8 @@ atomic_expr:
 | LPAR  l = separated_twolong_list(COMMA, located(binop_prio_0_expr)) RPAR { Tuple(l) }
 
 %inline variable:
-| id = located(identifier) types=option(type_argument_apply) { Variable (id, types) }
+| id = located(identifier) 
+  types=option(type_argument_apply) { Variable (id, types) }
 
 %inline record:
 | LCBRACK 
@@ -94,8 +101,7 @@ atomic_expr:
 
 
 %inline binop(E1, OP, E2):
-| e1 = located(E1) b = located(OP) e2 = located(E2) { Apply({value=Apply(b, e1); position= join e1.position e2.position},
-                                                             e2                                                           ) }
+| e1 = located(E1) b = located(OP) e2 = located(E2) { Apply({value=Apply(b, e1); position= join e1.position e2.position}, e2) }
 %inline prio_2:
 (* int -> int -> int *)
 | p = located(STAR)  { Variable(with_val (binop_name STAR) p, None)  }
@@ -115,7 +121,7 @@ atomic_expr:
 %inline prio_0:
 (* bool -> bool -> bool *)
 | p = located(DOUBLEAMPERSAND)   { Variable(with_val (binop_name DOUBLEAMPERSAND) p, None)   }
-| p = located(PIPEPIPE) { Variable(with_val (binop_name PIPEPIPE) p, None) }
+| p = located(PIPEPIPE)          { Variable(with_val (binop_name PIPEPIPE) p, None)          }
 
 %inline literal:
 | c = CHAR   { LChar c   }
@@ -141,14 +147,18 @@ atomic_pattern:
 | LPAR p = pattern RPAR    { p             }
 | c=located(constructor)
   targs=option(type_argument_apply)
-  l=option(delimited(LPAR, 
-                     separated_nonempty_list(COMMA, located(pattern)), 
-                     RPAR))                                              { PTaggedValue(c, targs, list_of_list_option l) }
-| UNDERSCORE               { PWildcard     }
-| id = located(identifier) { PVariable id  }
-| lit = located(literal)   { PLiteral lit  }
-| LCBRACK  l=separated_nonempty_list(COMMA, record_pattern) RCBRACK 
-           t = option(type_argument_apply)                              { PRecord(l, t)             }
+  l=option(
+      delimited(
+        LPAR, 
+        separated_nonempty_list(COMMA, located(pattern)), 
+        RPAR))                                            { PTaggedValue(c, targs, list_of_list_option l) }
+| UNDERSCORE                                              { PWildcard                                     }
+| id = located(identifier)                                { PVariable id                                  }
+| lit = located(literal)                                  { PLiteral lit                                  }
+| LCBRACK  
+    l=separated_nonempty_list(COMMA, record_pattern) 
+  RCBRACK 
+  t = option(type_argument_apply)                         { PRecord(l, t)                                 }
 
 
 
@@ -162,14 +172,14 @@ control_structure:
   LPAR    e1=located(expr) 
     TO    e2=located(expr) 
   RPAR
-  LCBRACK body=located(expr) RCBRACK     { For(id, e1, e2, body) }
+  LCBRACK body=located(expr) RCBRACK     { For(id, e1, e2, body)          }
 
 | WHILE LPAR cond=located(expr) RPAR 
-  LCBRACK    body=located(expr) RCBRACK  { While(cond, body) }
+  LCBRACK    body=located(expr) RCBRACK  { While(cond, body)              }
 | DO LCBRACK body=located(expr) RCBRACK 
-  WHILE LPAR cond=located(expr) RPAR     { While(cond, body) }
+  WHILE LPAR cond=located(expr) RPAR     { While(cond, body)              }
 | SWITCH LPAR cond=located(expr) RPAR 
-  LCBRACK     cases=switch_cases RCBRACK { Case(cond, cases) }
+  LCBRACK     cases=switch_cases RCBRACK { Case(cond, cases)              }
 
 switch_cases:
 | option(PIPE) cases=separated_nonempty_list(PIPE, located(switch_branch)) { cases }

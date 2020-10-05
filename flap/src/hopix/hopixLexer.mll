@@ -97,7 +97,7 @@ and token = parse
   | number                { try
                               INT(Int64.of_int (int_of_string (Lexing.lexeme lexbuf))) 
                             with
-                              Failure "int_of_string" -> global_error "during parsing" "Syntax error."}
+                              Failure "int_of_string" -> global_error "during parsing" "Syntax error." }
   (* atomic lexemes *)
   | "let"                 { LET                 }
   | "type"                { TYPE                }

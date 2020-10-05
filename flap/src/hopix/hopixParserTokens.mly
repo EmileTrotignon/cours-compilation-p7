@@ -63,11 +63,7 @@
 %left LPAR
 %left COLON
 
-%left COMMA
-%right SEMICOLON
 %right ARROW
-
-%left REF
 
 %left DOUBLEAMPERSAND
 %left PIPEPIPE

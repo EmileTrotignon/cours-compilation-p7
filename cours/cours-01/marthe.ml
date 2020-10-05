@@ -332,6 +332,7 @@ let compile : e -> instruction array =
       [variable_idx] est une liste associative des noms de variable
       du code source vers leurs indices associés.
 
+<<<<<<< HEAD
       [pos] est la position courante dans le code machine
       produit.
 
@@ -371,6 +372,34 @@ let compile : e -> instruction array =
   in
   let _, code = aux 0 [] 0 e in
   Array.of_list (code @ [ Halt ])
+=======
+      | ESum (x, start, stop, body) ->
+        let variable_idx'       = (x, nb_idx + 1) :: variable_idx in
+        let nb_idx'             = nb_idx + 1 in
+        let (pos, instrs_start) = aux nb_idx variable_idx pos start in
+        let (pos, set_x)        = (pos + 1, [ SetVar nb_idx' ]) in
+        let (pos, instrs_stop)  = aux nb_idx variable_idx pos stop in
+        let (pos, init_accu)    = (pos + 1, [ ResetAccu nb_idx' ]) in
+        let pos_body            = pos in
+        let (pos, instrs_body)  = aux nb_idx' variable_idx' pos body in
+        (pos + 5,
+         instrs_start
+         @ set_x
+         @ instrs_stop
+         @ init_accu
+         @ instrs_body
+         @ [ AddAccu nb_idx' ]
+         @ [ IncVar nb_idx';
+             Loop (nb_idx', pos_body);
+             Pop;
+             PushAccu nb_idx' ])
+
+      | EVar x ->
+         (pos + 1, [ GetVar (List.assoc x variable_idx) ])
+    in
+    let (_, code) = aux 0 [] 0 e in
+    Array.of_list (code @ [ Halt ])
+>>>>>>> origin/master
 
 let lot_of_variables = 128
 

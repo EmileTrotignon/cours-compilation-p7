@@ -183,3 +183,6 @@
 * Cours 4 : Introduction à la sémantique (1/2) <2020-09-28>
   Voir les
   [[file:cours-04-a-06/cours-04-a-06-intro-semantique-typage.pdf][transparents]].
+* Cours 5 : Introduction à la sémantique (2/2) <2020-10-05>
+  Voir les
+  [[file:cours-04-a-06/cours-04-a-06-intro-semantique-typage.pdf][transparents]].

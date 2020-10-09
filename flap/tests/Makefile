@@ -44,12 +44,8 @@ all.results: $(JALONS)
 
 %.output: %.hopix $(FLAP)
 	@$(FLAP) -s hopix --verbose true --dry true --unsafe true \
-<<<<<<< HEAD
-		$< >$@ 2>&1; exit 0
-=======
 		$< >$@ 2>&1; exit 0
 
 %.output: %.eval.hopix $(FLAP)
 	@$(FLAP) -s hopix --run true --dry true --unsafe true --sexp-in true \
 		$< >$@ 2>&1; exit 0
->>>>>>> 9158ba4ed66008fdfef985c821af4c787ed8d245

@@ -1,10 +1,12 @@
 open Position
 open HopixAST
 
+val fresh_identifier : unit -> identifier
 (** [fresh_identifier ()] returns a new fresh identifier each time it
     is called. *)
-val fresh_identifier : unit -> identifier
 
+val make_multi_assignments :
+  expression located list -> expression located list -> expression
 (** [make_multi_assignments [e1; ...; eN] [f1; ...; fN]] returns
     an expression of the form:
     [
@@ -15,12 +17,10 @@ val fresh_identifier : unit -> identifier
     ...
     eN := xN
     ] *)
-val make_multi_assignments
-  : expression located list -> expression located list -> expression
 
+val make_delayed_computation : expression located -> expression
 (** [make_delayed_computation e] returns an expression of the form:
 
     [ \() => e ]
 
 *)
-val make_delayed_computation : expression located -> expression

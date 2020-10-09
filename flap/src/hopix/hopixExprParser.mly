@@ -177,7 +177,7 @@ control_structure:
 | WHILE LPAR cond=located(expr) RPAR 
   LCBRACK    body=located(expr) RCBRACK  { While(cond, body)              }
 | DO LCBRACK body=located(expr) RCBRACK 
-  WHILE LPAR cond=located(expr) RPAR     { While(cond, body)              }
+  WHILE LPAR cond=located(expr) RPAR     { IfThenElse(cond, body, body)  }
 | SWITCH LPAR cond=located(expr) RPAR 
   LCBRACK     cases=switch_cases RCBRACK { Case(cond, cases)              }
 

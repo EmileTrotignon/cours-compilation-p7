@@ -147,5 +147,6 @@ and label =
 
 and t = program
 
+type elt = definition located
 
 [@@deriving sexp]

@@ -172,14 +172,17 @@ control_structure:
   LPAR    e1=located(expr) 
     TO    e2=located(expr) 
   RPAR
-  LCBRACK body=located(expr) RCBRACK     { For(id, e1, e2, body)          }
+  LCBRACK body=located(expr) RCBRACK     { For(id, e1, e2, body)                 }
 
 | WHILE LPAR cond=located(expr) RPAR 
-  LCBRACK    body=located(expr) RCBRACK  { While(cond, body)              }
+  LCBRACK    body=located(expr) RCBRACK  { While(cond, body)                     }
 | DO LCBRACK body=located(expr) RCBRACK 
-  WHILE LPAR cond=located(expr) RPAR     { While(cond, body)              }
+  WHILE LPAR cond=located(expr) RPAR     { Sequence([ body 
+                                                    ; { value=While(cond, body)
+                                                      ; position=body.position }
+                                                    ])                           }
 | SWITCH LPAR cond=located(expr) RPAR 
-  LCBRACK     cases=switch_cases RCBRACK { Case(cond, cases)              }
+  LCBRACK     cases=switch_cases RCBRACK { Case(cond, cases)                     }
 
 switch_cases:
 | option(PIPE) cases=separated_nonempty_list(PIPE, located(switch_branch)) { cases }

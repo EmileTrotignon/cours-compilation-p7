@@ -397,16 +397,14 @@ and extract_observable runtime runtime' =
     new_memory = runtime'.memory;
   }
 
-and eval_literal env mem lit = 
-      match lit with
-      | LInt i -> (env, mem, VInt i)
-      | LString s -> (env, mem, VString s)
-      | LChar c -> (env, mem, VChar c)
+and eval_literal env mem lit =
+  match lit with
+  | LInt i -> (env, mem, VInt i)
+  | LString s -> (env, mem, VString s)
+  | LChar c -> (env, mem, VChar c)
 
 and eval_variable env mem id =
-( env,
-        mem,
-        Environment.lookup id.position id.value env )
+  (env, mem, Environment.lookup id.position id.value env)
 
 and eval_tagged env mem var = failwith "todo"
 
@@ -422,17 +420,16 @@ and eval_define env mem def = failwith "todo"
 
 and eval_fun env mem fun_ = failwith "todo"
 
-and eval_apply env mem f args = 
-let environment', memory', f_value = expression' env mem f in
-      let environment', memory', arg_value =
-        expression' environment' memory' args
-      in
-      match value_as_closure_or_primitive f_value with
-      | Some (VPrimitive (_, f)) -> (environment', memory', f memory' arg_value)
-      | Some (VClosure (env, pattern, expression)) -> failwith "todo"
-      | Some _ -> failwith "unreacheable"
-      | None -> failwith "type error"
-
+and eval_apply env mem f args =
+  let environment', memory', f_value = expression' env mem f in
+  let environment', memory', arg_value =
+    expression' environment' memory' args
+  in
+  match value_as_closure_or_primitive f_value with
+  | Some (VPrimitive (_, f)) -> (environment', memory', f memory' arg_value)
+  | Some (VClosure (env, pattern, expression)) -> failwith "todo"
+  | Some _ -> failwith "unreacheable"
+  | None -> failwith "type error"
 
 and eval_ref env mem ref = failwith "todo"
 

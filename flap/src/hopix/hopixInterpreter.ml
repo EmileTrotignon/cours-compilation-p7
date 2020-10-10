@@ -436,17 +436,17 @@ and eval_apply env mem f args =
   | None -> failwith "type error"
 
 and eval_ref env mem ref = 
-let (env',mem',v) = expression' env mem ref in
+let v = expression' env mem ref in
 
-(env,mem',VLocation(Memory.allocate mem' Int64.one v ))
+VLocation(Memory.allocate mem Int64.one v )
 
 and eval_assign env mem assign = failwith "todo"
 
 and eval_read env mem read =
-let (env',mem',v) = expression' env mem read in
+let v = expression' env mem read in
 match value_as_location v with
 | None -> failwith "type error"
-| Some(loc) -> (env,mem',Memory.read (Memory.dereference mem' loc) Int64.zero );
+| Some(loc) -> (Memory.read (Memory.dereference mem loc) Int64.zero );
 
 
 and eval_case env mem case = failwith "todo"

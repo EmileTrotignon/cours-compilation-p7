@@ -418,8 +418,12 @@ match tuple with
 | _ ->
   VTuple(List.map (expression' env mem) tuple)
 
-and eval_sequence env mem seq = failwith "todo"
-
+and eval_sequence env mem seq = 
+  match seq with
+  | [] -> failwith "sequence must not be empty"
+  | [e] -> expression' env mem e
+  | e :: es -> (let _ = expression' env mem e in eval_sequence env mem es)
+  
 and eval_define env mem def = failwith "todo"
 
 and eval_fun env mem fun_ = failwith "todo"

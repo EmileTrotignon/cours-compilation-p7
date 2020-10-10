@@ -66,9 +66,10 @@ let value_as_closure = function
 let value_as_primitive = function VPrimitive (p, f) -> ret (p, f) | _ -> fail
 
 let value_as_closure_or_primitive = function
-| VClosure (e, p, b) -> ret (VClosure (e, p, b))
-| VPrimitive (p, f) -> ret (VPrimitive (p, f))
-| _ -> fail
+  | VClosure (e, p, b) -> ret (VClosure (e, p, b))
+  | VPrimitive (p, f) -> ret (VPrimitive (p, f))
+  | _ -> fail
+
 let value_as_bool = function
   | VTagged (KId "True", []) -> true
   | VTagged (KId "False", []) -> false
@@ -330,18 +331,22 @@ let rec evaluate runtime ast =
                         E, M ⊢ dv ⇒ E', M'
 
 *)
-and definition runtime ({value=d; position=p}:HopixAST.elt) = 
+and definition runtime ({ value = d; position = p } : HopixAST.elt) =
   match d with
   | DefineType _ -> runtime
   | DeclareExtern _ -> failwith "todo"
-  | DefineValue def -> 
-    (
+  | DefineValue def -> (
       match def with
-      | SimpleValue (id, _, e_loc) -> 
-        (let (_, m, v) = expression p runtime.environment runtime.memory e_loc.value in 
-         {environment=Environment.bind runtime.environment id.value v; memory=m})
-      | RecFunctions _ -> failwith "todo"
-    )
+      | SimpleValue (id, _, e_loc) ->
+          let _, m, v =
+            expression p runtime.environment runtime.memory e_loc.value
+          in
+          {
+            environment = Environment.bind runtime.environment id.value v;
+            memory = m;
+          }
+      | RecFunctions _ -> failwith "todo" )
+
 and expression' environment memory e : Environment.t * value Memory.t * value =
   expression (position e) environment memory (value e)
 
@@ -351,26 +356,29 @@ and expression' environment memory e : Environment.t * value Memory.t * value =
 
    and E = [runtime.environment], M = [runtime.memory].
 *)
-and expression _ environment memory (e:HopixAST.expression) = 
-match e with
-| Variable(loc_id, _) ->
-  (environment, memory, Environment.lookup loc_id.position loc_id.value environment)
-| Apply(f, args) -> (
-  let (environment', memory', f_value) = expression' environment memory f in
-  let (environment', memory', arg_value) = expression' environment' memory' args in
-  match value_as_closure_or_primitive f_value with
-  | Some(VPrimitive(_, f)) -> (environment', memory', f memory' arg_value)
-  | Some(VClosure(env, pattern, expression)) -> failwith "todo"
-  | Some(_) -> failwith "unreacheable"
-  | None -> failwith "type error"
-)
-| Literal(loc_lit) ->
- (match value loc_lit with
- | LInt i -> (environment, memory, VInt i)
- | LString s -> (environment, memory, VString s)
- | LChar c -> (environment, memory, VChar c))
-| _ -> failwith "todo"
-
+and expression pos environment memory = function
+  | Literal lit -> eval_literal environment memory lit.value
+  | Variable (id, _) -> eval_variable environment memory id
+  | Tagged (constr, _, e) -> eval_tagged environment memory constr.value e
+  | Record (l, _) -> eval_record environment memory l
+  | Field (expr, label) -> eval_field environment memory expr label
+  | Tuple exprs -> eval_tuple environment memory exprs
+  | Sequence seq -> eval_sequence environment memory seq
+  | Define (value_definition, expression) ->
+      eval_define environment memory value_definition expression
+  | Fun function_definition -> eval_fun environment memory function_definition
+  | Apply (f, arg) -> eval_apply environment memory f arg
+  | Ref expression -> eval_ref environment memory expression.value
+  | Assign (e1, e2) -> eval_assign environment memory e1.value e2.value
+  | Read expression -> eval_read environment memory expression
+  | Case (expr, branches) -> eval_case environment memory expr.value branches
+  | IfThenElse (cond, body, body_else) ->
+      eval_if_then_else environment memory cond.value body.value body_else.value
+  | While (cond, body) -> eval_while environment memory cond body
+  | For (id, bound_low, bound_high, body) ->
+      eval_for environment memory (id, bound_low, bound_high, body)
+  | TypeAnnotation (e, _) -> expression pos environment memory e.value
+  | _ -> failwith "todo"
 
 (** This function returns the difference between two runtimes. *)
 and extract_observable runtime runtime' =
@@ -389,6 +397,103 @@ and extract_observable runtime runtime' =
     new_memory = runtime'.memory;
   }
 
+and eval_literal env mem lit = 
+      match lit with
+      | LInt i -> (env, mem, VInt i)
+      | LString s -> (env, mem, VString s)
+      | LChar c -> (env, mem, VChar c)
+
+and eval_variable env mem id =
+( env,
+        mem,
+        Environment.lookup id.position id.value env )
+
+and eval_tagged env mem var = failwith "todo"
+
+and eval_record env mem record = failwith "todo"
+
+and eval_field env mem field = failwith "todo"
+
+and eval_tuple env mem tuple = failwith "todo"
+
+and eval_sequence env mem seq = failwith "todo"
+
+and eval_define env mem def = failwith "todo"
+
+and eval_fun env mem fun_ = failwith "todo"
+
+and eval_apply env mem f args = 
+let environment', memory', f_value = expression' env mem f in
+      let environment', memory', arg_value =
+        expression' environment' memory' args
+      in
+      match value_as_closure_or_primitive f_value with
+      | Some (VPrimitive (_, f)) -> (environment', memory', f memory' arg_value)
+      | Some (VClosure (env, pattern, expression)) -> failwith "todo"
+      | Some _ -> failwith "unreacheable"
+      | None -> failwith "type error"
+
+
+and eval_ref env mem ref = failwith "todo"
+
+and eval_assign env mem assign = failwith "todo"
+
+and eval_read env mem read = failwith "todo"
+
+and eval_case env mem case = failwith "todo"
+
+and eval_if_then_else env mem ifthenelse = failwith "todo"
+
+and eval_while env mem while_ = failwith "todo"
+
+and eval_for env mem for_ = failwith "todo"
+
 (** This function displays a difference between two runtimes. *)
 let print_observable (_ : runtime) observation =
   Environment.print observation.new_memory observation.new_environment
+
+(*
+expression =
+  (** A literal is a constant written "as is". *)
+  | Literal of literal located
+  (** A variable identifies a value. If this value is polymorphic, it can be
+      instantiated using a list of types.*)
+  | Variable of identifier located * ty located list option
+  (** A tagged value [K <ty_1, ..., ty_m> (e₁, ..., eₙ)]. *)
+  | Tagged of
+      constructor located * ty located list option * expression located list
+  (** A record [{l₁ = e₁, ..., lₙ = eₙ} <ty₁, ..., tyₘ>]. *)
+  | Record of (label located * expression located) list * ty located list option
+  (** A record field access [e.l]. *)
+  | Field of expression located * label located
+  (** A tuple [(e₁, ..., en)]. *)
+  | Tuple of expression located list
+  (** A sequence [e1; e2] *)
+  | Sequence of expression located list
+  (** A local definition of value(s) [value_definition; e₂]. *)
+  | Define of value_definition * expression located
+  (** An anonymous function [ pattern -> e ]. *)
+  | Fun of function_definition
+  (** A function application [a₁ (a₂))]. *)
+  | Apply of expression located * expression located
+  (** A reference allocation. *)
+  | Ref of expression located
+  (** An assignment. *)
+  | Assign of expression located * expression located
+  (** A dereference. *)
+  | Read of expression located
+  (** A pattern matching [switch (e) { p₁ -> e₁ | ... | pₙ -> eₙ }. *)
+  | Case of expression located * branch located list
+  (** A conditional expression of the form [if (...) ... else ...]. *)
+  | IfThenElse of expression located * expression located * expression located
+  (** An unbounded loop of the form [while (...) { ... }]. *)
+  | While of expression located * expression located
+  (** A bounded loop of the form [for x in (e₁ to e₂) { ... }]. *)
+  | For of
+      identifier located
+      * expression located * expression located
+      * expression located
+  (** A type annotation [(e : ty)]. *)
+  | TypeAnnotation of expression located * ty located
+
+*)

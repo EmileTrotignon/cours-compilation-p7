@@ -1,5 +1,5 @@
 FLAP?=../_build/default/src/flap.exe
-JALONS=01-Parsing.results
+JALONS=01-Parsing.results 02-Interpreter.results
 EXTS=hopix hobix fopix retrolix
 
 .PHONY: all clean test FAKE

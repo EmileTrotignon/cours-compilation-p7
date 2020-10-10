@@ -101,7 +101,8 @@ atomic_expr:
 
 
 %inline binop(E1, OP, E2):
-| e1 = located(E1) b = located(OP) e2 = located(E2) { Apply({value=Apply(b, e1); position= join e1.position e2.position}, e2) }
+| e1 = located(E1) b = located(OP) e2 = located(E2) { Apply(
+                                                        { value=Apply(b, e1); position=join e1.position b.position }, e2) }
 %inline prio_2:
 (* int -> int -> int *)
 | p = located(STAR)  { Variable(with_val (binop_name STAR) p, None)  }

@@ -368,7 +368,7 @@ and expression pos environment memory e : value = match e with
       eval_define environment memory value_definition expression
   | Fun function_definition -> eval_fun environment memory function_definition
   | Apply (f, arg) -> eval_apply environment memory f arg
-  | Ref expression -> eval_ref environment memory expression.value
+  | Ref expression -> eval_ref environment memory expression
   | Assign (e1, e2) -> eval_assign environment memory e1.value e2.value
   | Read expression -> eval_read environment memory expression
   | Case (expr, branches) -> eval_case environment memory expr.value branches
@@ -439,11 +439,19 @@ and eval_apply env mem f args =
   | Some _ -> failwith "unreacheable"
   | None -> failwith "type error"
 
-and eval_ref env mem ref = failwith "todo"
+and eval_ref env mem ref = 
+let v = expression' env mem ref in
+
+VLocation(Memory.allocate mem Int64.one v )
 
 and eval_assign env mem assign = failwith "todo"
 
-and eval_read env mem read = failwith "todo"
+and eval_read env mem read =
+let v = expression' env mem read in
+match value_as_location v with
+| None -> failwith "type error"
+| Some(loc) -> (Memory.read (Memory.dereference mem loc) Int64.zero );
+
 
 and eval_case env mem case = failwith "todo"
 

@@ -55,25 +55,27 @@ let value_as_string = function VString s -> ret s | _ -> fail
 
 let value_as_tagged = function VTagged (k, vs) -> ret (k, vs) | _ -> fail
 
+let value_as_tuple = function VTuple li -> ret li | _ -> fail
+
 let value_as_record = function VRecord fs -> ret fs | _ -> fail
 
 let value_as_location = function VLocation l -> ret l | _ -> fail
 
 let value_as_closure = function
   | VClosure (e, p, b) -> ret (e, p, b)
-  | _ -> fail
+  | _                  -> fail
 
 let value_as_primitive = function VPrimitive (p, f) -> ret (p, f) | _ -> fail
 
 let value_as_closure_or_primitive = function
   | VClosure (e, p, b) -> ret (VClosure (e, p, b))
-  | VPrimitive (p, f) -> ret (VPrimitive (p, f))
-  | _ -> fail
+  | VPrimitive (p, f)  -> ret (VPrimitive (p, f))
+  | _                  -> fail
 
 let value_as_bool = function
-  | VTagged (KId "True", []) -> true
+  | VTagged (KId "True", [])  -> true
   | VTagged (KId "False", []) -> false
-  | _ -> assert false
+  | _                         -> assert false
 
 type ('a, 'e) wrapper = 'a -> 'e gvalue
 (**
@@ -99,23 +101,23 @@ let print_value m v =
     if d >= max_depth then "..."
     else
       match v with
-      | VInt x -> Mint.to_string x
-      | VChar c -> "'" ^ Char.escaped c ^ "'"
-      | VString s -> "\"" ^ String.escaped s ^ "\""
-      | VUnit -> "()"
-      | VLocation a -> print_array_value d (Memory.dereference m a)
+      | VInt x              -> Mint.to_string x
+      | VChar c             -> "'" ^ Char.escaped c ^ "'"
+      | VString s           -> "\"" ^ String.escaped s ^ "\""
+      | VUnit               -> "()"
+      | VLocation a         -> print_array_value d (Memory.dereference m a)
       | VTagged (KId k, []) -> k
       | VTagged (KId k, vs) -> k ^ print_tuple d vs
-      | VTuple vs -> print_tuple d vs
-      | VRecord fs ->
+      | VTuple vs           -> print_tuple d vs
+      | VRecord fs          ->
           "{"
           ^ String.concat ", "
               (List.map
                  (fun (LId f, v) -> f ^ " = " ^ print_value (d + 1) v)
                  fs)
           ^ "}"
-      | VClosure _ -> "<fun>"
-      | VPrimitive (s, _) -> Printf.sprintf "<primitive: %s>" s
+      | VClosure _          -> "<fun>"
+      | VPrimitive (s, _)   -> Printf.sprintf "<primitive: %s>" s
   and print_tuple d vs =
     "(" ^ String.concat ", " (List.map (print_value (d + 1)) vs) ^ ")"
   and print_array_value d block =
@@ -171,7 +173,7 @@ end = struct
 
   let lookup' pos x =
     let rec aux = function
-      | EEmpty -> raise (UnboundIdentifier (x, pos))
+      | EEmpty          -> raise (UnboundIdentifier (x, pos))
       | EBind (y, v, e) -> if x = y then v else aux e
     in
     aux
@@ -188,11 +190,11 @@ end = struct
     let b = Buffer.create 13 in
     let push x v = Buffer.add_string b (print_binding m (x, v)) in
     let rec aux = function
-      | EEmpty -> Buffer.contents b
+      | EEmpty               -> Buffer.contents b
       | EBind (x, v, EEmpty) ->
           push x v;
           aux EEmpty
-      | EBind (x, v, e) ->
+      | EBind (x, v, e)      ->
           push x v;
           Buffer.add_string b "\n";
           aux e
@@ -241,7 +243,7 @@ let primitives =
               VPrimitive
                 ( name,
                   fun m -> function VInt y -> out (op x y) | v -> error m v )
-          | v -> error m v )
+          | v      -> error m v )
   in
   let bind_all what l x =
     List.fold_left
@@ -291,7 +293,7 @@ let primitives =
       ( "print_int",
         fun _ -> function
           | VInt x -> print (Mint.to_string x)
-          | _ -> assert false
+          | _      -> assert false
         (* By typing. *) )
   in
   let print_string =
@@ -332,7 +334,7 @@ let rec evaluate runtime ast =
 *)
 and definition runtime ({ value = d; position = p } : HopixAST.elt) =
   match d with
-  | DefineType _ -> runtime
+  | DefineType _    -> runtime
   | DeclareExtern _ -> failwith "todo"
   | DefineValue def -> (
       match def with
@@ -342,7 +344,7 @@ and definition runtime ({ value = d; position = p } : HopixAST.elt) =
             environment = Environment.bind runtime.environment id.value v;
             memory = runtime.memory;
           }
-      | RecFunctions _ -> failwith "todo" )
+      | RecFunctions _             -> failwith "todo" )
 
 and expression' environment memory e : value =
   expression (position e) environment memory (value e)
@@ -364,7 +366,8 @@ and expression pos environment memory e : value =
   | Sequence seq -> eval_sequence environment memory seq
   | Define (value_definition, expression) ->
       eval_define environment memory (value_definition, expression)
-  | Fun (FunctionDefinition(arg_p, body)) -> eval_fun environment memory (arg_p, body)
+  | Fun (FunctionDefinition (arg_p, body)) ->
+      eval_fun environment memory (arg_p, body)
   | Apply (f, arg) -> eval_apply environment memory (f, arg)
   | Ref expression -> eval_ref environment memory expression
   | Assign (e1, e2) -> eval_assign environment memory (e1, e2)
@@ -383,7 +386,7 @@ and extract_observable runtime runtime' =
     if env == env' then new_environment
     else
       match Environment.last env' with
-      | None -> assert false (* Absurd. *)
+      | None              -> assert false (* Absurd. *)
       | Some (x, v, env') ->
           let new_environment = Environment.bind new_environment x v in
           substract new_environment env env'
@@ -396,9 +399,9 @@ and extract_observable runtime runtime' =
 
 and eval_literal env mem lit : value =
   match lit with
-  | LInt i -> VInt i
+  | LInt i    -> VInt i
   | LString s -> VString s
-  | LChar c -> VChar c
+  | LChar c   -> VChar c
 
 and eval_variable env mem id : value =
   Environment.lookup id.position id.value env
@@ -412,20 +415,19 @@ and eval_field env mem field = failwith "todo"
 and eval_tuple env mem tuple =
   match tuple with
   | [] | [ _; _ ] -> failwith "tuple should be at least length 2"
-  | _ -> VTuple (List.map (expression' env mem) tuple)
+  | _             -> VTuple (List.map (expression' env mem) tuple)
 
 and eval_sequence env mem seq =
   match seq with
-  | [] -> failwith "sequence must not be empty"
-  | [ e ] -> expression' env mem e
+  | []      -> failwith "sequence must not be empty"
+  | [ e ]   -> expression' env mem e
   | e :: es ->
       let _ = expression' env mem e in
       eval_sequence env mem es
 
 and eval_define env mem def = failwith "todo"
 
-and eval_fun env mem (p_arg, body) =
-    VClosure(env, p_arg, body)
+and eval_fun env mem (p_arg, body) = VClosure (env, p_arg, body)
 
 and eval_apply env mem (f, args) =
   let f_value = expression' env mem f in
@@ -433,11 +435,9 @@ and eval_apply env mem (f, args) =
   match value_as_closure_or_primitive f_value with
   | Some (VPrimitive (_, f)) -> f mem arg_value
   | Some (VClosure (env, pattern, body)) -> (
-      let p = pattern.value in
-      match p with
-      | PVariable id ->
-          expression' (Environment.bind env id.value arg_value) mem body
-      | _ -> failwith "todo" )
+      match bind_value_to_pattern env pattern arg_value with
+      | Some bound_env -> expression' bound_env mem body
+      | None           -> failwith "pattern and function arg did not match" )
   | Some _ -> failwith "unreacheable"
   | None -> failwith "type error"
 
@@ -448,7 +448,7 @@ and eval_ref env mem ref =
 and eval_assign env mem (e1, e2) =
   let v1 = expression' env mem e1 in
   match value_as_location v1 with
-  | None -> failwith "type error"
+  | None     -> failwith "type error"
   | Some loc ->
       Memory.write
         (Memory.dereference mem loc)
@@ -458,7 +458,7 @@ and eval_assign env mem (e1, e2) =
 and eval_read env mem read =
   let v = expression' env mem read in
   match value_as_location v with
-  | None -> failwith "type error"
+  | None     -> failwith "type error"
   | Some loc -> Memory.read (Memory.dereference mem loc) Int64.zero
 
 and eval_case env mem case = failwith "todo"
@@ -469,8 +469,59 @@ and eval_while env mem while_ = failwith "todo"
 
 and eval_for env mem for_ = failwith "todo"
 
-and bind_arg_to_pattern env mem =
-failwith "todo"
+and bind_value_to_pattern env pattern value =
+  match pattern.value with
+  | PVariable id -> Some (Environment.bind env id.value value)
+  | PWildcard -> Some env
+  | PTypeAnnotation (pattern, _) -> bind_value_to_pattern env pattern value
+  | PLiteral literal -> (
+      match (literal.value, value) with
+      | LInt i, VInt i'       -> if i = i' then Some env else None
+      | LChar c, VChar c'     -> if c = c' then Some env else None
+      | LString s, VString s' -> if s = s' then Some env else None
+      | _, _                  -> None )
+  | PTaggedValue (constructor, _, patterns) -> (
+      match value with
+      | VTagged (constructor', values) ->
+          if constructor.value = constructor' then
+            bind_value_to_pattern env
+              (with_pos dummy (PTuple patterns))
+              (VTuple values)
+          else None
+      | _ -> None )
+  | PRecord (fields, _) -> failwith "todo"
+  | PTuple patterns -> (
+      match (patterns, value_as_tuple value) with
+      | _, None                 -> None
+      | [], _ | _, Some []      -> failwith "empty tuple pattern"
+      | [ p ], Some [ v ]       -> bind_value_to_pattern env p v
+      | p :: ps, Some (v :: vs) -> (
+          match bind_value_to_pattern env p v with
+          | None      -> None
+          | Some env' ->
+              bind_value_to_pattern env'
+                (with_pos dummy (PTuple ps))
+                (VTuple vs) ) )
+  | POr patterns -> (
+      match
+        List.find_opt
+          (function Some _ -> true | None -> false)
+          (List.map
+             (fun pattern -> bind_value_to_pattern env pattern value)
+             patterns)
+      with
+      | Some _ -> Some env
+      | None   -> None )
+  | PAnd patterns ->
+      if
+        List.for_all
+          (function Some _ -> true | None -> false)
+          (List.map
+             (fun pattern -> bind_value_to_pattern env pattern value)
+             patterns)
+      then Some env
+      else None
+
 (** This function displays a difference between two runtimes. *)
 let print_observable (_ : runtime) observation =
   Environment.print observation.new_memory observation.new_environment

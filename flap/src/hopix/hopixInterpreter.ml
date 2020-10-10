@@ -95,7 +95,6 @@ let bool_as_value b = if b then ptrue else pfalse
 let print_value m v =
   (* To avoid to print large (or infinite) values, we stop at depth 5. *)
   let max_depth = 5 in
-
   let rec print_value d v =
     if d >= max_depth then "..."
     else
@@ -360,24 +359,23 @@ and expression pos environment memory e : value =
   | Variable (id, _) -> eval_variable environment memory id
   | Tagged (constr, _, e) -> eval_tagged environment memory constr.value e
   | Record (l, _) -> eval_record environment memory l
-  | Field (expr, label) -> eval_field environment memory expr label
+  | Field (expr, label) -> eval_field environment memory (exp, label)
   | Tuple exprs -> eval_tuple environment memory exprs
   | Sequence seq -> eval_sequence environment memory seq
   | Define (value_definition, expression) ->
-      eval_define environment memory value_definition expression
-  | Fun function_definition -> eval_fun environment memory function_definition
-  | Apply (f, arg) -> eval_apply environment memory f arg
+      eval_define environment memory (value_definition, expression)
+  | Fun (FunctionDefinition(arg_p, body)) -> eval_fun environment memory (arg_p, body)
+  | Apply (f, arg) -> eval_apply environment memory (f, arg)
   | Ref expression -> eval_ref environment memory expression
-  | Assign (e1, e2) -> eval_assign environment memory e1 e2
+  | Assign (e1, e2) -> eval_assign environment memory (e1, e2)
   | Read expression -> eval_read environment memory expression
-  | Case (expr, branches) -> eval_case environment memory expr.value branches
+  | Case (expr, branches) -> eval_case environment memory (expr.value, branches)
   | IfThenElse (cond, body, body_else) ->
-      eval_if_then_else environment memory cond.value body.value body_else.value
-  | While (cond, body) -> eval_while environment memory cond body
+      eval_if_then_else environment memory (cond, body, body_else)
+  | While (cond, body) -> eval_while environment memory (cond, body)
   | For (id, bound_low, bound_high, body) ->
       eval_for environment memory (id, bound_low, bound_high, body)
   | TypeAnnotation (e, _) -> expression' environment memory e
-  | _ -> failwith "todo"
 
 (** This function returns the difference between two runtimes. *)
 and extract_observable runtime runtime' =
@@ -426,14 +424,20 @@ and eval_sequence env mem seq =
 
 and eval_define env mem def = failwith "todo"
 
-and eval_fun env mem fun_ = failwith "todo"
+and eval_fun env mem (p_arg, body) =
+    VClosure(env, p_arg, body)
 
-and eval_apply env mem f args =
+and eval_apply env mem (f, args) =
   let f_value = expression' env mem f in
   let arg_value = expression' env mem args in
   match value_as_closure_or_primitive f_value with
   | Some (VPrimitive (_, f)) -> f mem arg_value
-  | Some (VClosure (env, pattern, expression)) -> failwith "todo"
+  | Some (VClosure (env, pattern, body)) -> (
+      let p = pattern.value in
+      match p with
+      | PVariable id ->
+          expression' (Environment.bind env id.value arg_value) mem body
+      | _ -> failwith "todo" )
   | Some _ -> failwith "unreacheable"
   | None -> failwith "type error"
 
@@ -441,7 +445,7 @@ and eval_ref env mem ref =
   let v = expression' env mem ref in
   VLocation (Memory.allocate mem Int64.one v)
 
-and eval_assign env mem e1 e2 =
+and eval_assign env mem (e1, e2) =
   let v1 = expression' env mem e1 in
   match value_as_location v1 with
   | None -> failwith "type error"
@@ -465,6 +469,8 @@ and eval_while env mem while_ = failwith "todo"
 
 and eval_for env mem for_ = failwith "todo"
 
+and bind_arg_to_pattern env mem =
+failwith "todo"
 (** This function displays a difference between two runtimes. *)
 let print_observable (_ : runtime) observation =
   Environment.print observation.new_memory observation.new_environment

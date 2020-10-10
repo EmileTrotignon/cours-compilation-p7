@@ -16,7 +16,7 @@ let angles d = string "<" ^^ d ^^ string ">"
 
 let separate_postgrouped_map sep f xs =
   let rec aux = function
-    | [] -> empty
+    | []      -> empty
     | x :: xs -> group (sep ^^ f x) ^^ break 1 ^^ aux xs
   in
   match xs with [] -> empty | x :: xs -> f x ^^ break 1 ^^ aux xs
@@ -39,11 +39,11 @@ and definition = function
                 ^^ group (type_parameters_angles ts) )
             ++ string "=" )
         ++ type_definition tdef )
-  | DeclareExtern (x, t) ->
+  | DeclareExtern (x, t)     ->
       group
         ( string "extern" ++ located identifier x ++ string ":"
         ++ located type_scheme t )
-  | DefineValue vdef -> group (value_definition false vdef)
+  | DefineValue vdef         -> group (value_definition false vdef)
 
 and rec_function_definition paren rv =
   group
@@ -76,17 +76,17 @@ and type_parameters_bracketed = function
   | ts -> sqbrackets (type_parameters ts)
 
 and type_definition = function
-  | DefineSumType ks ->
+  | DefineSumType ks    ->
       gtype_definition "|" dataconstructor_definition (fun x -> x) ks
   | DefineRecordType ls -> gtype_definition "," label_definition braces ls
-  | Abstract -> empty
+  | Abstract            -> empty
 
 and label (LId s) = string s
 
 and dataconstructor_definition (k, tys) =
   match tys with
   | [] -> located dataconstructor k
-  | _ ->
+  | _  ->
       group
         ( located dataconstructor k
         ++ parens (separate_map (string "," ^^ break 1) (located ty) tys) )
@@ -106,7 +106,7 @@ and value_definition paren = function
            ++ group (located (if_paren_expression paren) e) ))
   | RecFunctions (f :: fs) ->
       rec_function "fun" f ++ separate_map (break 1) (rec_function "and") fs
-  | RecFunctions [] -> assert false
+  | RecFunctions []        -> assert false
 
 (* By parsing. *)
 and rec_function prefix (f, ot, fdef) =
@@ -118,13 +118,13 @@ and rec_function prefix (f, ot, fdef) =
        ++ function_definition true (space ^^ string "=" ^^ break 1) fdef ))
 
 and optional_type_annotation = function
-  | None -> empty
+  | None   -> empty
   | Some t -> type_annotation t
 
 and type_annotation t = group (break 1 ^^ (string ":" ++ located ty t))
 
 and optional_type_scheme_annotation = function
-  | None -> empty
+  | None   -> empty
   | Some t -> type_scheme_annotation t
 
 and type_scheme_annotation t =
@@ -135,13 +135,13 @@ and type_scheme (ForallTy (ts, t)) =
 
 and ty t =
   match t with
-  | TyCon (tcon, []) -> type_constructor tcon
-  | TyCon (tcon, tys) ->
+  | TyCon (tcon, [])   -> type_constructor tcon
+  | TyCon (tcon, tys)  ->
       group
         ( type_constructor tcon
         ^^ angles (separate_map (string "," ^^ break 1) (located ty) tys) )
-  | TyVar tvar -> type_variable tvar
-  | TyTuple tys ->
+  | TyVar tvar         -> type_variable tvar
+  | TyTuple tys        ->
       parens (separate_map (break 1 ^^ string "*" ^^ break 1) (located ty) tys)
   | TyArrow (in_, out) ->
       group
@@ -240,7 +240,7 @@ and guarded_expression (c, t) =
     (parens (located expression c) ^^ break 1 ^^ braces (located expression t))
 
 and optional_type_instantiation = function
-  | None -> empty
+  | None     -> empty
   | Some tys ->
       space
       ^^ string "<"
@@ -251,7 +251,7 @@ and else_expression e =
   break 1 ^^ (string "else" ++ braces (located expression e))
 
 and function_type_arguments = function
-  | None -> empty
+  | None    -> empty
   | Some ts -> angles (separate_map (break 1) (located ty) ts)
 
 and may_paren_under_if e =
@@ -282,9 +282,9 @@ and branch (Branch (p, e)) =
 and patterns ps = parens (separate_map (comma ^^ break 1) (located pattern) ps)
 
 and pattern = function
-  | PWildcard -> string "_"
-  | PVariable x -> located identifier x
-  | PTypeAnnotation (p, t) ->
+  | PWildcard                 -> string "_"
+  | PVariable x               -> located identifier x
+  | PTypeAnnotation (p, t)    ->
       parens (located pattern p ++ string ":" ++ located ty t)
   | PTaggedValue (k, tys, ps) -> (
       located dataconstructor k
@@ -293,23 +293,26 @@ and pattern = function
       match ps with
       | [] -> empty
       | ps -> parens (separate_map (comma ^^ break 1) (located pattern) ps) )
-  | PTuple ps -> parens (separate_map (comma ^^ break 1) (located pattern) ps)
-  | PRecord (ls, tys) ->
+  | PTuple ps                 -> parens
+                                   (separate_map
+                                      (comma ^^ break 1)
+                                      (located pattern) ps)
+  | PRecord (ls, tys)         ->
       braces (separate_map (semicolon ^^ break 1) label_pattern ls)
       ++ optional_type_instantiation tys
-  | PAnd ps ->
+  | PAnd ps                   ->
       parens
         (separate_map (break 1 ^^ string "&" ^^ break 1) (located pattern) ps)
-  | POr ps ->
+  | POr ps                    ->
       parens
         (separate_map (break 1 ^^ string "|" ^^ break 1) (located pattern) ps)
-  | PLiteral l -> located literal l
+  | PLiteral l                -> located literal l
 
 and label_pattern (f, p) = located label f ++ string "=" ++ located pattern p
 
 and literal = function
-  | LInt x -> int x
-  | LChar c -> char c
+  | LInt x    -> int x
+  | LChar c   -> char c
   | LString s -> string_literal s
 
 and char c = group (string "'" ^^ string (Char.escaped c) ^^ string "'")

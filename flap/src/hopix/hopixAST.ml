@@ -127,9 +127,6 @@ and literal =
   | LInt    of Mint.t
   | LString of string
   | LChar   of char
-
-
-
 and identifier =
   | Id of string
 

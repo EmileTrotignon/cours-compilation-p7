@@ -338,9 +338,7 @@ and definition runtime ({ value = d; position = p } : HopixAST.elt) =
   | DefineValue def -> (
       match def with
       | SimpleValue (id, _, e_loc) ->
-          let v =
-            expression p runtime.environment runtime.memory e_loc.value
-          in
+          let v = expression p runtime.environment runtime.memory e_loc.value in
           {
             environment = Environment.bind runtime.environment id.value v;
             memory = runtime.memory;
@@ -356,7 +354,8 @@ and expression' environment memory e : value =
 
    and E = [runtime.environment], M = [runtime.memory].
 *)
-and expression pos environment memory e : value = match e with
+and expression pos environment memory e : value =
+  match e with
   | Literal lit -> eval_literal environment memory lit.value
   | Variable (id, _) -> eval_variable environment memory id
   | Tagged (constr, _, e) -> eval_tagged environment memory constr.value e
@@ -399,11 +398,11 @@ and extract_observable runtime runtime' =
 
 and eval_literal env mem lit : value =
   match lit with
-  | LInt i ->  VInt i
-  | LString s ->  VString s
+  | LInt i -> VInt i
+  | LString s -> VString s
   | LChar c -> VChar c
 
-and eval_variable env mem id : value=
+and eval_variable env mem id : value =
   Environment.lookup id.position id.value env
 
 and eval_tagged env mem var = failwith "todo"
@@ -413,49 +412,50 @@ and eval_record env mem record = failwith "todo"
 and eval_field env mem field = failwith "todo"
 
 and eval_tuple env mem tuple =
-match tuple with
-| [] | [_; _]-> failwith "tuple should be at least length 2"
-| _ ->
-  VTuple(List.map (expression' env mem) tuple)
+  match tuple with
+  | [] | [ _; _ ] -> failwith "tuple should be at least length 2"
+  | _ -> VTuple (List.map (expression' env mem) tuple)
 
-and eval_sequence env mem seq = 
+and eval_sequence env mem seq =
   match seq with
   | [] -> failwith "sequence must not be empty"
-  | [e] -> expression' env mem e
-  | e :: es -> (let _ = expression' env mem e in eval_sequence env mem es)
-  
+  | [ e ] -> expression' env mem e
+  | e :: es ->
+      let _ = expression' env mem e in
+      eval_sequence env mem es
+
 and eval_define env mem def = failwith "todo"
 
 and eval_fun env mem fun_ = failwith "todo"
 
 and eval_apply env mem f args =
   let f_value = expression' env mem f in
-  let arg_value =
-    expression' env mem args
-  in
+  let arg_value = expression' env mem args in
   match value_as_closure_or_primitive f_value with
   | Some (VPrimitive (_, f)) -> f mem arg_value
   | Some (VClosure (env, pattern, expression)) -> failwith "todo"
   | Some _ -> failwith "unreacheable"
   | None -> failwith "type error"
 
-and eval_ref env mem ref = 
-let v = expression' env mem ref in
-
-VLocation(Memory.allocate mem Int64.one v )
+and eval_ref env mem ref =
+  let v = expression' env mem ref in
+  VLocation (Memory.allocate mem Int64.one v)
 
 and eval_assign env mem e1 e2 =
   let v1 = expression' env mem e1 in
   match value_as_location v1 with
   | None -> failwith "type error"
-  | Some(loc) -> Memory.write (Memory.dereference mem loc) Int64.zero (expression' env mem e2); VUnit
+  | Some loc ->
+      Memory.write
+        (Memory.dereference mem loc)
+        Int64.zero (expression' env mem e2);
+      VUnit
 
 and eval_read env mem read =
-let v = expression' env mem read in
-match value_as_location v with
-| None -> failwith "type error"
-| Some(loc) -> (Memory.read (Memory.dereference mem loc) Int64.zero );
-
+  let v = expression' env mem read in
+  match value_as_location v with
+  | None -> failwith "type error"
+  | Some loc -> Memory.read (Memory.dereference mem loc) Int64.zero
 
 and eval_case env mem case = failwith "todo"
 

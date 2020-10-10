@@ -338,16 +338,16 @@ and definition runtime ({ value = d; position = p } : HopixAST.elt) =
   | DefineValue def -> (
       match def with
       | SimpleValue (id, _, e_loc) ->
-          let _, m, v =
+          let v =
             expression p runtime.environment runtime.memory e_loc.value
           in
           {
             environment = Environment.bind runtime.environment id.value v;
-            memory = m;
+            memory = runtime.memory;
           }
       | RecFunctions _ -> failwith "todo" )
 
-and expression' environment memory e : Environment.t * value Memory.t * value =
+and expression' environment memory e : value =
   expression (position e) environment memory (value e)
 
 (** [expression pos runtime e] evaluates into a value [v] if
@@ -356,7 +356,7 @@ and expression' environment memory e : Environment.t * value Memory.t * value =
 
    and E = [runtime.environment], M = [runtime.memory].
 *)
-and expression pos environment memory = function
+and expression pos environment memory e : value = match e with
   | Literal lit -> eval_literal environment memory lit.value
   | Variable (id, _) -> eval_variable environment memory id
   | Tagged (constr, _, e) -> eval_tagged environment memory constr.value e
@@ -377,7 +377,7 @@ and expression pos environment memory = function
   | While (cond, body) -> eval_while environment memory cond body
   | For (id, bound_low, bound_high, body) ->
       eval_for environment memory (id, bound_low, bound_high, body)
-  | TypeAnnotation (e, _) -> expression pos environment memory e.value
+  | TypeAnnotation (e, _) -> expression' environment memory e
   | _ -> failwith "todo"
 
 (** This function returns the difference between two runtimes. *)
@@ -397,14 +397,14 @@ and extract_observable runtime runtime' =
     new_memory = runtime'.memory;
   }
 
-and eval_literal env mem lit =
+and eval_literal env mem lit : value =
   match lit with
-  | LInt i -> (env, mem, VInt i)
-  | LString s -> (env, mem, VString s)
-  | LChar c -> (env, mem, VChar c)
+  | LInt i ->  VInt i
+  | LString s ->  VString s
+  | LChar c -> VChar c
 
-and eval_variable env mem id =
-  (env, mem, Environment.lookup id.position id.value env)
+and eval_variable env mem id : value=
+  Environment.lookup id.position id.value env
 
 and eval_tagged env mem var = failwith "todo"
 
@@ -412,7 +412,11 @@ and eval_record env mem record = failwith "todo"
 
 and eval_field env mem field = failwith "todo"
 
-and eval_tuple env mem tuple = failwith "todo"
+and eval_tuple env mem tuple =
+match tuple with
+| [] | [_; _]-> failwith "tuple should be at least length 2"
+| _ ->
+  VTuple(List.map (expression' env mem) tuple)
 
 and eval_sequence env mem seq = failwith "todo"
 
@@ -421,12 +425,12 @@ and eval_define env mem def = failwith "todo"
 and eval_fun env mem fun_ = failwith "todo"
 
 and eval_apply env mem f args =
-  let environment', memory', f_value = expression' env mem f in
-  let environment', memory', arg_value =
-    expression' environment' memory' args
+  let f_value = expression' env mem f in
+  let arg_value =
+    expression' env mem args
   in
   match value_as_closure_or_primitive f_value with
-  | Some (VPrimitive (_, f)) -> (environment', memory', f memory' arg_value)
+  | Some (VPrimitive (_, f)) -> f mem arg_value
   | Some (VClosure (env, pattern, expression)) -> failwith "todo"
   | Some _ -> failwith "unreacheable"
   | None -> failwith "type error"

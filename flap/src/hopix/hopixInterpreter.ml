@@ -368,7 +368,7 @@ and expression pos environment memory = function
       eval_define environment memory value_definition expression
   | Fun function_definition -> eval_fun environment memory function_definition
   | Apply (f, arg) -> eval_apply environment memory f arg
-  | Ref expression -> eval_ref environment memory expression.value
+  | Ref expression -> eval_ref environment memory expression
   | Assign (e1, e2) -> eval_assign environment memory e1.value e2.value
   | Read expression -> eval_read environment memory expression
   | Case (expr, branches) -> eval_case environment memory expr.value branches
@@ -431,11 +431,19 @@ and eval_apply env mem f args =
   | Some _ -> failwith "unreacheable"
   | None -> failwith "type error"
 
-and eval_ref env mem ref = failwith "todo"
+and eval_ref env mem ref = 
+let (env',mem',v) = expression' env mem ref in
+
+(env,mem',VLocation(Memory.allocate mem' Int64.one v ))
 
 and eval_assign env mem assign = failwith "todo"
 
-and eval_read env mem read = failwith "todo"
+and eval_read env mem read =
+let (env',mem',v) = expression' env mem read in
+match value_as_location v with
+| None -> failwith "type error"
+| Some(loc) -> (env,mem',Memory.read (Memory.dereference mem' loc) Int64.zero );
+
 
 and eval_case env mem case = failwith "todo"
 
@@ -448,49 +456,3 @@ and eval_for env mem for_ = failwith "todo"
 (** This function displays a difference between two runtimes. *)
 let print_observable (_ : runtime) observation =
   Environment.print observation.new_memory observation.new_environment
-
-(*
-expression =
-  (** A literal is a constant written "as is". *)
-  | Literal of literal located
-  (** A variable identifies a value. If this value is polymorphic, it can be
-      instantiated using a list of types.*)
-  | Variable of identifier located * ty located list option
-  (** A tagged value [K <ty_1, ..., ty_m> (e₁, ..., eₙ)]. *)
-  | Tagged of
-      constructor located * ty located list option * expression located list
-  (** A record [{l₁ = e₁, ..., lₙ = eₙ} <ty₁, ..., tyₘ>]. *)
-  | Record of (label located * expression located) list * ty located list option
-  (** A record field access [e.l]. *)
-  | Field of expression located * label located
-  (** A tuple [(e₁, ..., en)]. *)
-  | Tuple of expression located list
-  (** A sequence [e1; e2] *)
-  | Sequence of expression located list
-  (** A local definition of value(s) [value_definition; e₂]. *)
-  | Define of value_definition * expression located
-  (** An anonymous function [ pattern -> e ]. *)
-  | Fun of function_definition
-  (** A function application [a₁ (a₂))]. *)
-  | Apply of expression located * expression located
-  (** A reference allocation. *)
-  | Ref of expression located
-  (** An assignment. *)
-  | Assign of expression located * expression located
-  (** A dereference. *)
-  | Read of expression located
-  (** A pattern matching [switch (e) { p₁ -> e₁ | ... | pₙ -> eₙ }. *)
-  | Case of expression located * branch located list
-  (** A conditional expression of the form [if (...) ... else ...]. *)
-  | IfThenElse of expression located * expression located * expression located
-  (** An unbounded loop of the form [while (...) { ... }]. *)
-  | While of expression located * expression located
-  (** A bounded loop of the form [for x in (e₁ to e₂) { ... }]. *)
-  | For of
-      identifier located
-      * expression located * expression located
-      * expression located
-  (** A type annotation [(e : ty)]. *)
-  | TypeAnnotation of expression located * ty located
-
-*)

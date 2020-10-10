@@ -369,7 +369,7 @@ and expression pos environment memory e : value = match e with
   | Fun function_definition -> eval_fun environment memory function_definition
   | Apply (f, arg) -> eval_apply environment memory f arg
   | Ref expression -> eval_ref environment memory expression
-  | Assign (e1, e2) -> eval_assign environment memory e1.value e2.value
+  | Assign (e1, e2) -> eval_assign environment memory e1 e2
   | Read expression -> eval_read environment memory expression
   | Case (expr, branches) -> eval_case environment memory expr.value branches
   | IfThenElse (cond, body, body_else) ->
@@ -444,7 +444,11 @@ let v = expression' env mem ref in
 
 VLocation(Memory.allocate mem Int64.one v )
 
-and eval_assign env mem assign = failwith "todo"
+and eval_assign env mem e1 e2 =
+  let v1 = expression' env mem e1 in
+  match value_as_location v1 with
+  | None -> failwith "type error"
+  | Some(loc) -> Memory.write (Memory.dereference mem loc) Int64.zero (expression' env mem e2); VUnit
 
 and eval_read env mem read =
 let v = expression' env mem read in

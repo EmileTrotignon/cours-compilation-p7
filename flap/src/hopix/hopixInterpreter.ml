@@ -408,7 +408,10 @@ and eval_variable env mem id : value =
 
 and eval_tagged env mem var = failwith "todo"
 
-and eval_record env mem record = failwith "todo"
+and eval_record env mem  = function 
+| [] -> failwith "record must not be empty"
+| [(_,f)] -> expression' env mem f
+| (_,_)::es -> eval_record env mem es 
 
 and eval_field env mem field = failwith "todo"
 
@@ -425,7 +428,8 @@ and eval_sequence env mem seq =
       let _ = expression' env mem e in
       eval_sequence env mem es
 
-and eval_define env mem def = failwith "todo"
+and eval_define env mem (arg_p, body) = failwith "todo"
+
 
 and eval_fun env mem (p_arg, body) = VClosure (env, p_arg, body)
 

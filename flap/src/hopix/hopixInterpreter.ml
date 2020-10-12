@@ -5,6 +5,8 @@ open HopixAST
 (** [error pos msg] reports execution error messages. *)
 let error positions msg = errorN "execution" positions msg
 
+let label_name label = match label with LId s -> s
+
 (** Every expression of Hopix evaluates into a [value].
 
    The [value] type is not defined here. Instead, it will be defined
@@ -94,10 +96,10 @@ let bool_as_value b = if b then ptrue else pfalse
    the code of this function since it is used by the testsuite.
 
 *)
-let print_value m v =
+let print_value m v : string =
   (* To avoid to print large (or infinite) values, we stop at depth 5. *)
   let max_depth = 5 in
-  let rec print_value d v =
+  let rec print_value (d : int) v =
     if d >= max_depth then "..."
     else
       match v with
@@ -336,15 +338,16 @@ and definition runtime ({ value = d; position = p } : HopixAST.elt) =
   match d with
   | DefineType _    -> runtime
   | DeclareExtern _ -> failwith "todo"
-  | DefineValue def -> (
-      match def with
-      | SimpleValue (id, _, e_loc) ->
-          let v = expression p runtime.environment runtime.memory e_loc.value in
-          {
-            environment = Environment.bind runtime.environment id.value v;
-            memory = runtime.memory;
-          }
-      | RecFunctions _             -> failwith "todo" )
+  | DefineValue def -> eval_value_definition runtime p def
+
+and eval_value_definition runtime p = function
+  | SimpleValue (id, _, e_loc) ->
+      let v = expression p runtime.environment runtime.memory e_loc.value in
+      {
+        environment = Environment.bind runtime.environment id.value v;
+        memory = runtime.memory;
+      }
+  | RecFunctions _             -> failwith "todo"
 
 and expression' environment memory e : value =
   expression (position e) environment memory (value e)
@@ -408,18 +411,22 @@ and eval_variable env mem id : value =
 
 and eval_tagged env mem var = failwith "todo"
 
-and eval_record env mem  = function 
-| [] -> failwith "record must not be empty"
-| [(_,f)] -> expression' env mem f
-| (_,_)::es -> eval_record env mem es 
+and eval_record env mem list =
+  VRecord
+    (List.map
+       (fun (label, expr) -> (label.value, expression' env mem expr))
+       list)
 
-and eval_field env mem (expr,label) = 
-  let label_name label =
-    match label with LId(s)-> s
-  in
-match value_as_record (expression' env mem expr) with
-| None -> failwith "field access must be done on a record"
-| Some fs -> snd (List.find (fun (lab, value) -> String.equal (label_name lab) (label_name label.value)) fs)
+and eval_field env mem (expr, label) =
+  let v = expression' env mem expr in
+  match value_as_record v with
+  | None    -> failwith "field access must be done on a record"
+  | Some fs ->
+      snd
+        (List.find
+           (fun (lab, value) ->
+             String.equal (label_name lab) (label_name label.value))
+           fs)
 
 and eval_tuple env mem tuple =
   match tuple with
@@ -434,8 +441,13 @@ and eval_sequence env mem seq =
       let _ = expression' env mem e in
       eval_sequence env mem es
 
-and eval_define env mem (arg_p, body) = failwith "todo"
-
+and eval_define env mem (val_def, body) =
+  let runtime =
+    eval_value_definition
+      { environment = env; memory = mem }
+      body.position val_def
+  in
+  expression' runtime.environment runtime.memory body
 
 and eval_fun env mem (p_arg, body) = VClosure (env, p_arg, body)
 

@@ -301,3 +301,5 @@ public/
 # Org mode
 journal.tex
 journal.pdf
+
+.vscode

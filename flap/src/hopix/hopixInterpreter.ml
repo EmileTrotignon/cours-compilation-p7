@@ -361,7 +361,7 @@ and expression pos environment memory e : value =
   | Variable (id, _) -> eval_variable environment memory id
   | Tagged (constr, _, e) -> eval_tagged environment memory constr.value e
   | Record (l, _) -> eval_record environment memory l
-  | Field (expr, label) -> eval_field environment memory (exp, label)
+  | Field (expr, label) -> eval_field environment memory (expr, label)
   | Tuple exprs -> eval_tuple environment memory exprs
   | Sequence seq -> eval_sequence environment memory seq
   | Define (value_definition, expression) ->
@@ -413,7 +413,13 @@ and eval_record env mem  = function
 | [(_,f)] -> expression' env mem f
 | (_,_)::es -> eval_record env mem es 
 
-and eval_field env mem field = failwith "todo"
+and eval_field env mem (expr,label) = 
+  let label_name label =
+    match label with LId(s)-> s
+  in
+match value_as_record (expression' env mem expr) with
+| None -> failwith "field access must be done on a record"
+| Some fs -> snd (List.find (fun (lab, value) -> String.equal (label_name lab) (label_name label.value)) fs)
 
 and eval_tuple env mem tuple =
   match tuple with

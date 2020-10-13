@@ -79,6 +79,11 @@ let value_as_bool = function
   | VTagged (KId "False", []) -> false
   | _                         -> assert false
 
+let value_as_bool_option = function
+  | VTagged (KId "True", [])  -> ret true
+  | VTagged (KId "False", []) -> ret false
+  | _                         -> fail
+
 type ('a, 'e) wrapper = 'a -> 'e gvalue
 (**
    It is also very common to have to inject an OCaml value into
@@ -375,7 +380,7 @@ and expression pos environment memory e : value =
   | Ref expression -> eval_ref environment memory expression
   | Assign (e1, e2) -> eval_assign environment memory (e1, e2)
   | Read expression -> eval_read environment memory expression
-  | Case (expr, branches) -> eval_case environment memory (expr.value, branches)
+  | Case (expr, branches) -> eval_case environment memory (expr, branches)
   | IfThenElse (cond, body, body_else) ->
       eval_if_then_else environment memory (cond, body, body_else)
   | While (cond, body) -> eval_while environment memory (cond, body)
@@ -409,7 +414,8 @@ and eval_literal env mem lit : value =
 and eval_variable env mem id : value =
   Environment.lookup id.position id.value env
 
-and eval_tagged env mem var = failwith "todo"
+and eval_tagged env mem constr args =
+  VTagged (constr, List.map (expression' env mem) args)
 
 and eval_record env mem list =
   VRecord
@@ -430,8 +436,8 @@ and eval_field env mem (expr, label) =
 
 and eval_tuple env mem tuple =
   match tuple with
-  | [] | [ _; _ ] -> failwith "tuple should be at least length 2"
-  | _             -> VTuple (List.map (expression' env mem) tuple)
+  | [] | [ _ ] -> failwith "tuple should be at least length 2"
+  | _          -> VTuple (List.map (expression' env mem) tuple)
 
 and eval_sequence env mem seq =
   match seq with
@@ -483,13 +489,28 @@ and eval_read env mem read =
   | None     -> failwith "type error"
   | Some loc -> Memory.read (Memory.dereference mem loc) Int64.zero
 
-and eval_case env mem case = failwith "todo"
+and eval_case env mem (expr, cases) =
+  let rec aux value (cases : branch located list) =
+    match cases with
+    | []            -> failwith "no cases matched"
+    | case :: cases -> (
+        let (Branch (pattern, result)) = case.value in
+        match bind_value_to_pattern env pattern value with
+        | Some env' -> expression' env' mem result
+        | None      -> aux value cases )
+  in
+  aux (expression' env mem expr) cases
 
-and eval_if_then_else env mem ifthenelse = failwith "todo"
+and eval_if_then_else env mem (cond, body, body_else) =
+  let cond_v = expression' env mem cond in
+  match value_as_bool_option cond_v with
+  | Some true  -> expression' env mem body
+  | Some false -> expression' env mem body_else
+  | None       -> failwith "If condition must be bool"
 
-and eval_while env mem while_ = failwith "todo"
+and eval_while env mem (cond, body) = failwith "todo"
 
-and eval_for env mem for_ = failwith "todo"
+and eval_for env mem (var, low_bound, high_bound, body) = failwith "todo"
 
 and bind_value_to_pattern env pattern value =
   match pattern.value with
@@ -511,7 +532,23 @@ and bind_value_to_pattern env pattern value =
               (VTuple values)
           else None
       | _ -> None )
-  | PRecord (fields, _) -> failwith "todo"
+  | PRecord (fields, _) -> (
+      match (value_as_record value, fields) with
+      | _, [] | Some [], _ -> failwith "empty record"
+      | None, _ -> None
+      | Some [ (label, value) ], [ (label', pattern) ] ->
+          if String.equal (label_name label) (label_name label'.value) then
+            bind_value_to_pattern env pattern value
+          else None
+      | Some ((label, value) :: vs), (label', pattern) :: ps ->
+          if String.equal (label_name label) (label_name label'.value) then
+            match bind_value_to_pattern env pattern value with
+            | None     -> None
+            | Some env ->
+                bind_value_to_pattern env
+                  (with_pos dummy (PRecord (ps, None)))
+                  (VRecord vs)
+          else None )
   | PTuple patterns -> (
       match (patterns, value_as_tuple value) with
       | _, None                 -> None
@@ -534,15 +571,16 @@ and bind_value_to_pattern env pattern value =
       with
       | Some _ -> Some env
       | None   -> None )
-  | PAnd patterns ->
-      if
-        List.for_all
-          (function Some _ -> true | None -> false)
-          (List.map
-             (fun pattern -> bind_value_to_pattern env pattern value)
-             patterns)
-      then Some env
-      else None
+  | PAnd patterns -> (
+      match patterns with
+      | []                   -> failwith "empty conjuction"
+      | [ pattern ]          -> bind_value_to_pattern env pattern value
+      | pattern :: patterns' -> (
+          match bind_value_to_pattern env pattern value with
+          | None     -> None
+          | Some env ->
+              bind_value_to_pattern env (with_pos dummy (PAnd patterns')) value
+          ) )
 
 (** This function displays a difference between two runtimes. *)
 let print_observable (_ : runtime) observation =

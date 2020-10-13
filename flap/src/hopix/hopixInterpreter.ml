@@ -356,7 +356,7 @@ and eval_value_definition runtime p = function
       let env =
         List.fold_left
           (fun env (id, _, FunctionDefinition (pattern, expr)) ->
-            Environment.bind runtime.environment id.value
+            Environment.bind env id.value
               (VClosure (Environment.empty, pattern, expr)))
           runtime.environment definitions
       in

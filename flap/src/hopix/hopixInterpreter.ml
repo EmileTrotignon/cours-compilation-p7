@@ -514,73 +514,79 @@ and eval_for env mem (var, low_bound, high_bound, body) = failwith "todo"
 
 and bind_value_to_pattern env pattern value =
   match pattern.value with
-  | PVariable id -> Some (Environment.bind env id.value value)
+  | PVariable id -> bind_value_to_pvariable env id value
   | PWildcard -> Some env
   | PTypeAnnotation (pattern, _) -> bind_value_to_pattern env pattern value
-  | PLiteral literal -> (
-      match (literal.value, value) with
-      | LInt i, VInt i'       -> if i = i' then Some env else None
-      | LChar c, VChar c'     -> if c = c' then Some env else None
-      | LString s, VString s' -> if s = s' then Some env else None
-      | _, _                  -> None )
-  | PTaggedValue (constructor, _, patterns) -> (
-      match value with
-      | VTagged (constructor', values) ->
-          if constructor.value = constructor' then
-            bind_value_to_pattern env
-              (with_pos dummy (PTuple patterns))
-              (VTuple values)
-          else None
-      | _ -> None )
-  | PRecord (fields, _) -> (
-      match (value_as_record value, fields) with
-      | _, [] | Some [], _ -> failwith "empty record"
-      | None, _ -> None
-      | Some [ (label, value) ], [ (label', pattern) ] ->
-          if String.equal (label_name label) (label_name label'.value) then
-            bind_value_to_pattern env pattern value
-          else None
-      | Some ((label, value) :: vs), (label', pattern) :: ps ->
-          if String.equal (label_name label) (label_name label'.value) then
-            match bind_value_to_pattern env pattern value with
-            | None     -> None
-            | Some env ->
-                bind_value_to_pattern env
-                  (with_pos dummy (PRecord (ps, None)))
-                  (VRecord vs)
-          else None )
-  | PTuple patterns -> (
-      match (patterns, value_as_tuple value) with
-      | _, None                 -> None
-      | [], _ | _, Some []      -> failwith "empty tuple pattern"
-      | [ p ], Some [ v ]       -> bind_value_to_pattern env p v
-      | p :: ps, Some (v :: vs) -> (
-          match bind_value_to_pattern env p v with
-          | None      -> None
-          | Some env' ->
-              bind_value_to_pattern env'
-                (with_pos dummy (PTuple ps))
-                (VTuple vs) ) )
-  | POr patterns -> (
-      match
-        List.find_opt
-          (function Some _ -> true | None -> false)
-          (List.map
-             (fun pattern -> bind_value_to_pattern env pattern value)
-             patterns)
-      with
-      | Some _ -> Some env
-      | None   -> None )
-  | PAnd patterns -> (
-      match patterns with
-      | []                   -> failwith "empty conjuction"
-      | [ pattern ]          -> bind_value_to_pattern env pattern value
-      | pattern :: patterns' -> (
-          match bind_value_to_pattern env pattern value with
-          | None     -> None
-          | Some env ->
-              bind_value_to_pattern env (with_pos dummy (PAnd patterns')) value
-          ) )
+  | PLiteral literal -> bind_value_to_pliteral env literal value
+  | PTaggedValue (constructor, _, patterns) ->
+      bind_value_to_ptagged env (constructor, patterns) value
+  | PRecord (fields, _) -> bind_value_to_precord env fields value
+  | PTuple patterns -> bind_value_to_ptuple env patterns value
+  | POr patterns -> bind_value_to_por env patterns value
+  | PAnd patterns -> bind_value_to_pand env patterns value
+
+and bind_value_to_pvariable env id value =
+  Some (Environment.bind env id.value value)
+
+and bind_value_to_pliteral env literal value =
+  match (literal.value, value) with
+  | LInt i, VInt i'       -> if i = i' then Some env else None
+  | LChar c, VChar c'     -> if c = c' then Some env else None
+  | LString s, VString s' -> if String.equal s s' then Some env else None
+  | _, _                  -> None
+
+and bind_value_to_ptagged env (constructor, patterns) value =
+  match value with
+  | VTagged (constructor', values) ->
+      if constructor.value = constructor' then
+        bind_value_to_ptuple env patterns (VTuple values)
+      else None
+  | _ -> None
+
+and bind_value_to_precord env fields value =
+  match (value_as_record value, fields) with
+  | _, [] | Some [], _ -> failwith "empty record"
+  | None, _ -> None
+  | Some [ (label, value) ], [ (label', pattern) ] ->
+      if String.equal (label_name label) (label_name label'.value) then
+        bind_value_to_pattern env pattern value
+      else None
+  | Some ((label, value) :: vs), (label', pattern) :: ps ->
+      if String.equal (label_name label) (label_name label'.value) then
+        match bind_value_to_pattern env pattern value with
+        | None     -> None
+        | Some env -> bind_value_to_precord env ps (VRecord vs)
+      else None
+
+and bind_value_to_ptuple env patterns value =
+  match (patterns, value_as_tuple value) with
+  | _, None                 -> None
+  | [], _ | _, Some []      -> failwith "empty tuple pattern"
+  | [ p ], Some [ v ]       -> bind_value_to_pattern env p v
+  | p :: ps, Some (v :: vs) -> (
+      match bind_value_to_pattern env p v with
+      | None      -> None
+      | Some env' -> bind_value_to_ptuple env' ps (VTuple vs) )
+
+and bind_value_to_por env patterns value =
+  match
+    List.find_opt
+      (function Some _ -> true | None -> false)
+      (List.map
+         (fun pattern -> bind_value_to_pattern env pattern value)
+         patterns)
+  with
+  | Some _ -> Some env
+  | None   -> None
+
+and bind_value_to_pand env patterns value =
+  match patterns with
+  | []                   -> failwith "empty conjuction"
+  | [ pattern ]          -> bind_value_to_pattern env pattern value
+  | pattern :: patterns' -> (
+      match bind_value_to_pattern env pattern value with
+      | None     -> None
+      | Some env -> bind_value_to_pand env patterns' value )
 
 (** This function displays a difference between two runtimes. *)
 let print_observable (_ : runtime) observation =

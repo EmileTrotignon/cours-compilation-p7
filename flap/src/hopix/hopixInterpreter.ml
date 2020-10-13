@@ -352,7 +352,20 @@ and eval_value_definition runtime p = function
         environment = Environment.bind runtime.environment id.value v;
         memory = runtime.memory;
       }
-  | RecFunctions _             -> failwith "todo"
+  | RecFunctions definitions   ->
+      let env =
+        List.fold_left
+          (fun env (id, _, FunctionDefinition (pattern, expr)) ->
+            Environment.bind runtime.environment id.value
+              (VClosure (Environment.empty, pattern, expr)))
+          runtime.environment definitions
+      in
+      List.iter
+        (fun (id, _, FunctionDefinition (pattern, expr)) ->
+          Environment.update id.position id.value env
+            (VClosure (env, pattern, expr)))
+        definitions;
+      { environment = env; memory = runtime.memory }
 
 and expression' environment memory e : value =
   expression (position e) environment memory (value e)
@@ -537,6 +550,8 @@ and bind_value_to_pliteral env literal value =
 
 and bind_value_to_ptagged env (constructor, patterns) value =
   match value with
+  | VTagged (constructor', []) ->
+      if constructor.value = constructor' then Some env else None
   | VTagged (constructor', values) ->
       if constructor.value = constructor' then
         bind_value_to_ptuple env patterns (VTuple values)

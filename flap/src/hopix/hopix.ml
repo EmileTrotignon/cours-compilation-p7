@@ -1,20 +1,12 @@
 (** The Hopix programming language. *)
 
+open SyntacticAnalysis
+
 let name = "hopix"
 
 module AST = HopixAST
 
 type ast = HopixAST.t
-
-let process ~lexer_init ~lexer_fun ~parser_fun ~input =
-  let buf = lexer_init input in
-  let lexer_init' _ = buf in
-  try
-    SyntacticAnalysis.process ~lexer_init:lexer_init' ~lexer_fun ~parser_fun
-      ~input
-  with HopixParser.Error ->
-    Error.error "parsing" (Position.cpos buf) "Syntax error."
-
 let parse lexer_init input =
   process ~lexer_init
     ~lexer_fun:(fun buf ->

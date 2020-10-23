@@ -341,9 +341,10 @@ let rec evaluate runtime ast =
 *)
 and definition runtime ({ value = d; position = p } : HopixAST.elt) =
   match d with
-  | DefineType _    -> runtime
-  | DeclareExtern (id, _) -> error [id.position] "No extern allowed in intepreted mode"
-  | DefineValue def -> eval_value_definition runtime p def
+  | DefineType _          -> runtime
+  | DeclareExtern (id, _) ->
+      error [ id.position ] "No extern allowed in intepreted mode"
+  | DefineValue def       -> eval_value_definition runtime p def
 
 and eval_value_definition runtime p = function
   | SimpleValue (id, _, e_loc) ->
@@ -424,8 +425,7 @@ and eval_literal lit : value =
   | LString s -> VString s
   | LChar c   -> VChar c
 
-and eval_variable env id : value =
-  Environment.lookup id.position id.value env
+and eval_variable env id : value = Environment.lookup id.position id.value env
 
 and eval_tagged env mem constr args =
   VTagged (constr, List.map (expression' env mem) args)
@@ -439,7 +439,7 @@ and eval_record env mem list =
 and eval_field env mem (expr, label) =
   let v = expression' env mem expr in
   match value_as_record v with
-  | None    -> error [expr.position] "Field access must be done on a record"
+  | None    -> error [ expr.position ] "Field access must be done on a record"
   | Some fs ->
       snd
         (List.find
@@ -450,14 +450,14 @@ and eval_field env mem (expr, label) =
 and eval_tuple env mem tuple pos =
   match tuple with
   (* Should not be reached if using parser. Can be reached by using s-expressions *)
-  | [] | [ _ ] ->  error [pos] "Tuple should be at least length 2" 
+  | [] | [ _ ] -> error [ pos ] "Tuple should be at least length 2"
   | _          -> VTuple (List.map (expression' env mem) tuple)
 
 and eval_sequence env mem seq pos =
   match seq with
   (* Should not be reached if using parser. Can be reached by using s-expressions *)
-  | []      -> error [pos] "Sequence must not be empty"
-  | [ e ]   -> expression' env mem e
+  | [] -> error [ pos ] "Sequence must not be empty"
+  | [ e ] -> expression' env mem e
   | e :: es ->
       let _ = expression' env mem e in
       eval_sequence env mem es pos
@@ -480,9 +480,15 @@ and eval_apply env mem (f, args) =
   | Some (VClosure (env, pattern, body)) -> (
       match bind_value_to_pattern env pattern arg_value with
       | Some bound_env -> expression' bound_env mem body
-      | None           -> error [f.position; args.position] "Argument definition and passed arguments did not match" )
+      | None           ->
+          error
+            [ f.position; args.position ]
+            "Argument definition and passed arguments did not match" )
   | Some _ -> assert false
-  | None -> error [f.position; args.position] "Application of something that is not a function"
+  | None ->
+      error
+        [ f.position; args.position ]
+        "Application of something that is not a function"
 
 and eval_ref env mem ref =
   let v = expression' env mem ref in
@@ -491,7 +497,10 @@ and eval_ref env mem ref =
 and eval_assign env mem (e1, e2) =
   let v1 = expression' env mem e1 in
   match value_as_location v1 with
-  | None     -> error [e1.position; e2.position] "Assignation to something that is not a ref"
+  | None     ->
+      error
+        [ e1.position; e2.position ]
+        "Assignation to something that is not a ref"
   | Some loc ->
       Memory.write
         (Memory.dereference mem loc)
@@ -501,13 +510,14 @@ and eval_assign env mem (e1, e2) =
 and eval_read env mem read =
   let v = expression' env mem read in
   match value_as_location v with
-  | None     -> error [read.position] "Dereferencing something that is not a ref"
+  | None     -> error [ read.position ]
+                  "Dereferencing something that is not a ref"
   | Some loc -> Memory.read (Memory.dereference mem loc) Int64.zero
 
 and eval_case env mem (expr, cases) pos =
   let rec aux value (cases : branch located list) =
     match cases with
-    | []            -> error [pos] "No cases matched"
+    | []            -> error [ pos ] "No cases matched"
     | case :: cases -> (
         let (Branch (pattern, result)) = case.value in
         match bind_value_to_pattern env pattern value with
@@ -521,11 +531,37 @@ and eval_if_then_else env mem (cond, body, body_else) =
   match value_as_bool_option cond_v with
   | Some true  -> expression' env mem body
   | Some false -> expression' env mem body_else
-  | None       -> error [cond.position] "Condition of `if` control structure must be bool"
+  | None       ->
+      error [ cond.position ] "Condition of `if` control structure must be bool"
 
-and eval_while env mem (cond, body) = failwith "todo"
+and eval_while env mem (cond, body) =
+  let b = value_as_bool_option (expression' env mem cond) in
+  match b with
+  | Some true  ->
+      ignore (expression' env mem body);
+      eval_while env mem (cond, body)
+  | Some false -> VUnit
+  | None       ->
+      error [ cond.position ]
+        "Condition of `while` control structure must be bool"
 
-and eval_for env mem (var_name, low_bound, high_bound, body) = failwith "todo"
+and eval_for env mem (var_name, low_bound, high_bound, body) =
+  let low_b =
+    match value_as_int (expression' env mem low_bound) with
+    | Some i -> Int64.to_int i
+    | None   -> error [ low_bound.position ] "Type must be int"
+  in
+  let high_b =
+    match value_as_int (expression' env mem high_bound) with
+    | Some i -> Int64.to_int i
+    | None   -> error [ high_bound.position ] "Type must be int"
+  in
+
+  for i = low_b to high_b do
+    let env' = Environment.bind env var_name.value (VInt (Int64.of_int i)) in
+    ignore (expression' env' mem body)
+  done;
+  VUnit
 
 and bind_value_to_pattern env pattern value =
   match pattern.value with
@@ -601,8 +637,8 @@ and bind_value_to_por env patterns value =
 and bind_value_to_pand env patterns value =
   match patterns with
   (* Should not be reached if using parser. Can be reached by using s-expressions *)
-  | []                   -> failwith "empty conjuction"
-  | [ pattern ]          -> bind_value_to_pattern env pattern value
+  | [] -> failwith "empty conjuction"
+  | [ pattern ] -> bind_value_to_pattern env pattern value
   | pattern :: patterns' -> (
       match bind_value_to_pattern env pattern value with
       | None     -> None

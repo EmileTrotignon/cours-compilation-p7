@@ -595,7 +595,7 @@ and bind_value_to_por env patterns value =
          (fun pattern -> bind_value_to_pattern env pattern value)
          patterns)
   with
-  | Some _ -> Some env
+  | Some env -> env
   | None   -> None
 
 and bind_value_to_pand env patterns value =

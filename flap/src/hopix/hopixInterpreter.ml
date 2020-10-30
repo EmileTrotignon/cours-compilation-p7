@@ -484,7 +484,7 @@ and eval_apply env mem (f, args) =
           error
             [ f.position; args.position ]
             "Argument definition and passed arguments did not match" )
-  | Some _ -> assert false
+  | Some _ -> failwith "should never happen"
   | None ->
       error
         [ f.position; args.position ]
@@ -588,12 +588,9 @@ and bind_value_to_pliteral env literal value =
 
 and bind_value_to_ptagged env (constructor, patterns) value =
   match value with
-  | VTagged (constructor', []) ->
-      if constructor.value = constructor' then Some env else None
-  | VTagged (constructor', values) ->
-      if constructor.value = constructor' then
-        bind_value_to_ptuple env patterns (VTuple values)
-      else None
+  | VTagged (constructor', []) when constructor.value = constructor' -> Some env
+  | VTagged (constructor', values) when constructor.value = constructor' ->
+      bind_value_to_ptuple env patterns (VTuple values)
   | _ -> None
 
 and bind_value_to_precord env fields value =
@@ -632,7 +629,7 @@ and bind_value_to_por env patterns value =
          patterns)
   with
   | Some env -> env
-  | None   -> None
+  | None     -> None
 
 and bind_value_to_pand env patterns value =
   match patterns with

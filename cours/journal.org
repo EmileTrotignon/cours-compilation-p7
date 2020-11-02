@@ -8,24 +8,18 @@
 #+LATEX_HEADER: \usepackage{a4wide}
 #+LATEX_HEADER: \usepackage{microtype}
 #+LATEX_HEADER: \hypersetup{colorlinks = true}
+#+LATEX_HEADER: \usepackage[french]{babel}
 # (org-latex-export-to-pdf)
 * Cours 1 : Introduction <2020-09-07>
 ** Présentation
    Bienvenue en Master 1 !
 
-   [[mailto:guatto@irif.fr][Adrien Guatto]]
-
-   [[http://www.irif.fr/~guatto/][page perso]]
-
-   En TP, Peter Habermehl, qui se présentera.
-
-   Le cours et les TPs auront lieu si tout va bien en présentiel.
-
-   Cours : lundi 16h-18h dans cette salle (2035).
-
-   (Aujourd'hui, 16h-17h30 exceptionnellement.)
-
-   TP : vendredi 8h30-10h30 en 2001 à partir de la semaine prochaine.
+   |-------------------+--------------------------------------------+---------------------+-------|
+   | Séance            | Enseignant                                 | Horaire             | Salle |
+   |-------------------+--------------------------------------------+---------------------+-------|
+   | Cours             | [[mailto:guatto@irif.fr][Adrien Guatto]]   | lundi 16h-18h       |  2035 |
+   | Travaux pratiques | [[mailto:haberm@irif.fr][Peter Habermehl]] | vendredi 8h30-10h30 |  2001 |
+   |-------------------+--------------------------------------------+---------------------+-------|
 
    Information pratique : la salle 2001 est réservée de 18h à 20h pour les
    étudiants qui suivent le cours de protocole réseau en distanciel.
@@ -464,3 +458,209 @@ l2:
     - La documentation combinée d'Intel (5000+ pages), disponible sur la
       [[https://software.intel.com/content/www/us/en/develop/download/intel-64-and-ia-32-architectures-sdm-combined-volumes-1-2a-2b-2c-2d-3a-3b-3c-3d-and-4.html][page]]
       du constructeur.
+* Cours 8 : Assembleur x86-64 <2020-11-02>
+** Programmation en assembleur x86-64
+*** L'état du processeur
+    Les instructions x86-64 servent à modifier l'état du processeur qui, en ce
+    qui nous concerne, est formé des données suivantes.
+
+    *Attention* : deux syntaxes pour le code assembleur x86-64 existent : Intel
+     et GNU/AT&T. Nous utiliserons la syntaxe GNU/AT&T, comme Andrew Tolmach,
+     mais beaucoup de documenation utilise la syntaxe Intel.
+**** Les registres
+
+     Un registre est un petit emplacement mémoire non-adressable situé
+     directement sur le processeur. Y accéder est très rapide.
+
+     En x86-64, on dispose de seize registres généraux de 64 bits, baptisés
+     %rax, %rbx, %rcx, %rdx, %rbp, %rsp, %rdi, %rsi, %r8, %r9, %r10, %r11-%r15.
+
+     Il y a des registres 32 bits %eax, %ebx, etc. ainsi que 16 bits %ax, %bx,
+     etc. Le contenu de ces petits registres est identique aux bits de poids
+     forts de %rax, %rbx, etc. Autrement dit, ces registres sont des /alias/,
+     par exemple modifier %ax modifie %eax et modifier %eax modifie %rax.
+
+     En plus, on a des registres spécifiques dans lesquels on ne peut pas lire,
+     par exemple %rip le pointeur d'instruction courant, ou %rflags qui contient
+     un champ de bits donnant des informations sur les résultats arithmétiques
+     (génération d'un overflow, etc.).
+**** La mémoire
+
+     Elle est découpée en différentes zones, dont la pile d'exécution.
+
+     Les entiers sont représentés en petit-boutien (/little-endian/), autrement
+     dit les bits de poids forts sont stockés aux adresses les plus basses. Pour
+     plus de détails, consulter
+     [[https://fr.wikipedia.org/wiki/Endianness][Wikipédia]].
+
+     On lit et écrit dans la mémoire principalement via l'instruction ~mov~ :
+     ~mov SRC, DST~.
+
+     On peut spécifier une adresse mémoire source *ou* destination via un /mode
+     d'adressage/ complexe. Pour ce qui nous occupe, le mode d'adressage le plus
+     utile sera ~OFFSET(BASE, INDEX, SCALE)~ où :
+
+     - ~OFFSET~ est une valeur immédiate,
+
+     - ~BASE~ est un registre,
+
+     - ~INDEX~ est un registre optionnel,
+
+     - ~SCALE~ est un entier optionnel pris dans l'ensemble { 1, 2, 4, 8 }.
+
+     Quelques exemples :
+
+     - ~movq $42, %rax~ écrit l'entier 42 dans %rax.
+
+     - ~movq %rbx, -8(%rsp)~ écrit le contenu de %rbx dans la mémoire à
+       l'adresse ~%rsp - 8~.
+
+     *Attention* : l'instruction ~mov~ n'autorise pas les transferts de mémoire
+     à mémoire. En d'autres termes, un seul des opérandes peut accéder à la
+     mémoire par instruction. Par exemple, ~movq (%rax), (%rbx)~ est invalide.
+
+     Il y a plusieurs variantes de l'instruction ~mov~, selon la taille des
+     données à transférer : ~movq~, ~movl~, ~movw~, ~movb~. Ici, ~q~ = quad = 64
+     bits, ~l~ = long = 32 bits, ~w~ = word = 16 bits, ~b~ = byte = 8 bits.
+*** Les instructions
+**** Les instructions arithmétiques et logiques
+     Les instructions arithmétiques et logiques, comme ~add~, autorisent aussi
+     les opérandes mémoires. C'est une des différences entre CISC et RISC.
+
+     Tout comme ~mov~, les instructions arithmétiques et logiques sont
+     disponibles en variantes ~q~, ~l~, ~w~ et ~b~.
+
+     Les instructions arithmétiques peuvent modifier le registre ~rflags~, dont
+     le contenu est spécifié par la table suivante.
+
+     |-----+-----------------+------------|
+     | bit | signification   | mnémonique |
+     |-----+-----------------+------------|
+     |   0 | Retenue         | CF         |
+     |   1 | Parité          | PF         |
+     |   6 | Zéro            | ZF         |
+     |   7 | Signe (1 = neg) | SF         |
+     |  11 | Overflow        | OF         |
+     |-----+-----------------+------------|
+
+     Quelques instructions :
+
+     - ~addq SRC, DST~ : calcule ~SRC + DST~ et stocke le résultat dans ~DST~ en
+       mettant à jour ~rflags~.
+
+     - ~cmpq SRC1, SRC2~ : calcule ~SRC2 - SRC1~, ignore le résultat mais met à
+       jour ~rflags~.
+
+     Je réfère aux notes d'Andrew Tolmach pour détails et autres instructions.
+**** La pile
+     Une architecture doit également spécifier une /convention d'appel/, qui
+     dicte le fonctionnement des appels de fonction dans le but de permettre
+     l'interopérabilité entre divers compilateurs, voire langages.
+
+     Nous allons utiliser la convention d'appel dictée par l'interface binaire
+     (/application binary interface/, ou ABI) POSIX System V pour x86-64.
+
+     Celle-ci spécifie l'usage d'une pile pour stocker certains arguments de
+     fonction, ainsi que les variables locales. Le sommet courant de la pile
+     (son adresse) est, par convention, stocké dans le registre %rsp (/register
+     stack pointer/, logique !). Cette adresse doit toujours être alignée sur
+     huit octets (multiple de huit). La pile croît vers les adresses basses.
+
+     Un appel de fonction stocke ses données dans son /cadre de pile/. Le cadre
+     de pile courant est stocké dans le registre %rbp (/register base pointer/).
+
+     Pour travailler sur la pile, on utilise les instructions ~push~ et
+     ~pop~. L'instruction ~pushq SRC~ correspond à la séquence d'instructions
+     ~subq $8, %rsp; movq %rax, (%rsp)~, l'instruction ~popq DST~ correspond à
+     la séquence d'instructions ~movq %rax, -8(%rsp); addq $8, %rsp~.
+**** Instructions de contrôle
+     Elles permettent de modifier le flot d'exécution (la prochaine instruction
+     à exécuter). En voici quelques-unes :
+
+     - ~jmp foo~ : saute inconditionnellement vers ~foo~.
+
+     - ~je foo~ : saute vers ~foo~ si le flag ZF de ~rflags~ est à 1.
+
+     - ~jmp *%rax~ : saute à l'adresse de code contenue par %rax.
+
+     *Attention* : à l'exécution d'une instruction de saut, %rsp+8 doit toujours
+     être aligné sur 16 octets.
+
+     Encore une fois, je vous renvoie aux notes d'Andrew Tolmach.
+*** Quelques exemples
+    On a étudié des rudiments de programmation x86-64 lors de la dernière
+    séance, et lors du TD. Essayons de mettre en pratique aujourd'hui.
+**** Factorielle itérative
+     On écrit le code de factorielle dans un style itératif, avec une boucle. Le
+     code C, pour se fixer les idées :
+
+ #+BEGIN_SRC C
+     int64_t fact(int64_t n) {
+       int64_t res = 1;
+       while (n > 1) {
+         res *= n--;
+       }
+       return res;
+     }
+ #+END_SRC
+***** Solution
+ #+BEGIN_SRC asm
+      fact:   movq $1, %rax
+      fact0:  cmp $1, %rdi
+              jle fact1
+              imulq %rdi, %rax
+              dec %rdi
+              jmp fact0
+      fact1:  ret
+ #+END_SRC
+**** Fonction principale
+     On souhaite appeler ~printf()~ pour afficher le résultat de
+     ~fact(6)~. Attention aux contraintes d'alignement de l'ABI System V !
+***** Solution
+ #+BEGIN_SRC asm
+     .global main
+     main:   subq $8, %rsp
+             movq $6, %rdi
+             call factr
+             movq $msg, %rdi
+             movq %rax, %rsi
+             call printf
+             movq $0, %rdi
+             call exit
+ #+END_SRC
+**** Factorielle récursive naïve.
+     On écrit le code de factorielle dans un style récursif naïf, l'équivalent
+     du code OCaml suivant :
+
+ #+BEGIN_SRC ocaml
+     let rec fact n = if n <= 1 then 1 else n * fact (n - 1)
+ #+END_SRC
+
+***** Solution
+      En écrivant du code mécaniquement, comme un compilateur très naïf, on
+      obtient l'assembleur ci-dessous.
+
+ #+BEGIN_SRC asm
+      factr:  pushq %rbp
+              movq %rsp, %rbp
+              subq $8, %rsp
+              cmp $1, %rdi
+              jle factr0
+              movq %rdi, -8(%rbp)
+              dec %rdi
+              call factr
+              imulq -8(%rbp), %rax
+              addq $8, %rsp
+              popq %rbp
+              ret
+      factr0: movq $1, %rax
+              addq $8, %rsp
+              popq %rbp
+              ret
+ #+END_SRC
+
+      *Attention* : dans le code ci-dessus, on a négligé la contrainte
+      d'alignement de la pile à chaque call, ne respectant pas strictement l'ABI
+      System V. Ce n'est pas gênant dans la mesure où on appelle jamais de
+      fonction de la bibliothèque standard ici. Dans votre passe Retrolix vers
+      x86-64, vous *devez* respecter cette contrainte.

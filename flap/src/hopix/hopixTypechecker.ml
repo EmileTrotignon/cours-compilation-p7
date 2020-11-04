@@ -11,6 +11,13 @@ let type_error = HopixTypes.type_error
 
 let located f x = f (Position.position x) (Position.value x)
 
+let rec arg_list_of_function aty =
+  match aty with
+  | ATyArrow (t1, t2) ->
+      let args, result = arg_list_of_function t2 in
+      (t1 :: args, result)
+  | _                 -> ([], aty)
+
 (** [check_program_is_fully_annotated ast] performs a syntactic check
  that the programmer wrote sufficient type annotations for [typecheck]
  to run correctly. *)
@@ -194,8 +201,40 @@ let typecheck tenv ast : typing_environment =
       let scheme = lookup_type_scheme_of_value id.position id.value tenv in
       type_of_monotype scheme
     and type_of_tagged tenv constr args =
-      match lookup_type_scheme_of_constructor constr tenv with
-      | Scheme (variables, aty) -> aty
+      try
+        match
+          lookup_type_scheme_of_constructor (Position.value constr) tenv
+        with
+        | Scheme (variables, aty) ->
+            let args', result = arg_list_of_function aty in
+            let args'_ref = ref args' in
+            let args_ref = ref args in
+
+            let seq () =
+              let rec aux args' args () =
+                match (args', args) with
+                | [], []              -> Seq.Nil
+                | a' :: a's, a :: as_ ->
+                    Seq.Cons
+                      ( ( a',
+                          Position.with_pos (Position.position a)
+                            (type_of_expression' tenv a) ),
+                        aux a's as_ )
+                | _                   -> assert false
+              in
+              aux args' args ()
+            in
+            Seq.iter
+              (fun (aty, aty_l) ->
+                check_expected_type (Position.position aty_l) aty
+                  (Position.value aty_l))
+              seq;
+            result
+      with UnboundConstructor ->
+        type_error pos
+          ( "Unbound constructor `"
+          ^ (match Position.value constr with KId s -> s)
+          ^ "'." )
     and type_of_record tenv list = failwith "TODO 1"
     and type_of_field tenv (expr, (label : label Position.located)) =
       let t_expr = type_of_expression' tenv expr in
@@ -204,11 +243,12 @@ let typecheck tenv ast : typing_environment =
       ATyTuple (List.map (type_of_expression' tenv) tuple)
     and type_of_sequence tenv seq =
       match seq with
-      | [] -> failwith "empty sec"
-      | [ e ] -> type_of_expression' tenv e
+      | []        -> failwith "empty sec"
+      | [ e ]     -> type_of_expression' tenv e
       | e :: seq' ->
           let t_e = type_of_expression' tenv e in
-          check_expected_type (Position.position e) t_e (ATyCon (TCon "unit", []));
+          check_expected_type (Position.position e) t_e
+            (ATyCon (TCon "unit", []));
           type_of_sequence tenv seq'
     and type_of_define tenv (value_definition, expression) =
       match value_definition with
@@ -237,7 +277,8 @@ let typecheck tenv ast : typing_environment =
     and type_of_assign tenv (e1, e2) =
       ( match type_of_expression' tenv e1 with
       | ATyCon (TCon "mut", [ inner_type ]) ->
-          check_expected_type (Position.position e2) inner_type (type_of_expression' tenv e2)
+          check_expected_type (Position.position e2) inner_type
+            (type_of_expression' tenv e2)
       | _ -> failwith "not a ref" );
       ATyCon (TCon "unit", [])
     and type_of_read tenv read =
@@ -255,15 +296,20 @@ let typecheck tenv ast : typing_environment =
     and type_of_while tenv (cond, body) =
       let t_cond = type_of_expression' tenv cond in
       let t_body = type_of_expression' tenv body in
-      check_expected_type cond.position t_cond  (ATyCon (TCon "bool", []));
-      check_expected_type body.position t_body  (ATyCon (TCon "unit", []));
+      check_expected_type cond.position t_cond (ATyCon (TCon "bool", []));
+      check_expected_type body.position t_body (ATyCon (TCon "unit", []));
       t_body
-    and type_of_for tenv
-        (var_name , low_bound, high_bound, body) =
+    and type_of_for tenv (var_name, low_bound, high_bound, body) =
       let t_low = type_of_expression' tenv low_bound in
       let t_high = type_of_expression' tenv high_bound in
-      check_expected_type (Position.position low_bound) t_low (ATyCon (TCon "int", []));
-      check_expected_type (Position.position high_bound) t_high (ATyCon (TCon "int", []));
+      check_expected_type
+        (Position.position low_bound)
+        t_low
+        (ATyCon (TCon "int", []));
+      check_expected_type
+        (Position.position high_bound)
+        t_high
+        (ATyCon (TCon "int", []));
       let tenv' =
         {
           values =
@@ -282,7 +328,7 @@ let typecheck tenv ast : typing_environment =
     function
     | Literal lit -> type_of_literal lit.value
     | Variable (id, _) -> type_of_variable tenv id
-    | Tagged (constr, _, e) -> type_of_tagged tenv constr.value e
+    | Tagged (constr, _, e) -> type_of_tagged tenv constr e
     | Record (l, _) -> type_of_record tenv l
     | Field (expr, label) -> type_of_field tenv (expr, label)
     | Tuple exprs -> type_of_tuple tenv exprs

@@ -173,7 +173,7 @@ let typecheck tenv ast : typing_environment =
         match aty with
         | Scheme (ts, ATyArrow (_, out)) ->
             let tenv = bind_type_variables pos tenv ts in
-            let tenv, _ = located (pattern tenv) p in
+            let tenv, _ = located (pattern tenv None) p in
             check_expression_monotype tenv out e
         | _ -> type_error pos "A function must have an arrow type." )
   (* [check_expected_type pos xty ity] verifies that the expected
@@ -199,7 +199,7 @@ let typecheck tenv ast : typing_environment =
       | LChar _   -> ATyCon (TCon "char", [])
     and type_of_variable tenv (id : 'a Position.located) : aty =
       let scheme = lookup_type_scheme_of_value id.position id.value tenv in
-      type_of_monotype scheme
+      match scheme with Scheme (_, ty) -> ty
     and type_of_tagged tenv constr args =
       try
         match
@@ -207,9 +207,6 @@ let typecheck tenv ast : typing_environment =
         with
         | Scheme (variables, aty) ->
             let args', result = arg_list_of_function aty in
-            let args'_ref = ref args' in
-            let args_ref = ref args in
-
             let seq () =
               let rec aux args' args () =
                 match (args', args) with
@@ -250,27 +247,19 @@ let typecheck tenv ast : typing_environment =
           check_expected_type (Position.position e) t_e
             (ATyCon (TCon "unit", []));
           type_of_sequence tenv seq'
-    and type_of_define tenv (value_definition, expression) =
-      match value_definition with
-      | SimpleValue (name, type_scheme, value) ->
-          let scheme =
-            match (Option.get type_scheme).value with
-            | ForallTy (type_var, ty) ->
-                Scheme (List.map Position.value type_var, aty_of_ty' ty)
-          in
-          let tenv' = bind_value name.value scheme tenv in
-          type_of_expression' tenv' expression
-      | RecFunctions _ -> failwith "TODO 2"
+    and type_of_define tenv (value_def, expression) =
+      let tenv' = value_definition tenv value_def in
+      type_of_expression' tenv' expression
     and type_of_fun tenv (p_arg, body) =
-      let tenv', aty_arg = pattern' tenv p_arg in
+      let tenv', aty_arg = pattern' tenv None p_arg in
       ATyArrow (aty_arg, type_of_expression' tenv' body)
-    and type_of_apply tenv ((f : expression Position.located), args) =
+    and type_of_apply tenv (f, args) =
       match type_of_expression' tenv f with
       | ATyArrow (t_expected_arg, t_result) ->
           let t_real_arg = type_of_expression' tenv args in
-          check_expected_type f.position t_real_arg t_expected_arg;
+          check_expected_type (Position.position args) t_expected_arg t_real_arg;
           t_result
-      | _ -> failwith "not a function"
+      | aty -> failwith (print_aty aty ^ " is not a function")
     and type_of_ref tenv ref =
       let inner_type = type_of_expression' tenv ref in
       ATyCon (TCon "mut", [ inner_type ])
@@ -285,7 +274,21 @@ let typecheck tenv ast : typing_environment =
       match type_of_expression' tenv read with
       | ATyCon (TCon "mut", [ inner_type ]) -> inner_type
       | _ -> failwith "not a ref"
-    and type_of_case tenv (expr, cases) = failwith "TODO 4"
+    and type_of_case tenv (expr, (cases : branch Position.located list)) =
+      let aty_matched = type_of_expression' tenv expr in
+      let l =
+        List.map
+          (fun branch ->
+            match Position.value branch with
+            | Branch (pattern, body) ->
+                let tenv', aty_pattern =
+                  pattern' tenv (Some aty_matched) pattern
+                in
+                check_expected_type pos aty_pattern aty_matched;
+                type_of_expression' tenv' body)
+          cases
+      in
+      match l with [] -> assert false | x :: _ -> x
     and type_of_if_then_else tenv (cond, body, body_else) =
       let t_cond = type_of_expression' tenv cond in
       let t_body = type_of_expression' tenv body in
@@ -353,18 +356,79 @@ let typecheck tenv ast : typing_environment =
         else type_error pos "annotation not conforming to type value"
   and type_of_expression' tenv expr =
     type_of_expression tenv expr.position expr.value
-  and patterns tenv = function
+  (*and patterns tenv = function
     | []      -> (tenv, [])
     | p :: ps ->
         let tenv, ty = located (pattern tenv) p in
         let tenv, tys = patterns tenv ps in
-        (tenv, ty :: tys)
+        (tenv, ty :: tys)*)
   (* [pattern tenv pos p] computes a new environment completed with
       the variables introduced by the pattern [p] as well as the type
       of this pattern. *)
-  and pattern tenv pos p : typing_environment * aty =
-    failwith "Students! This is your job!"
-  and pattern' tenv p = pattern tenv p.position p.value in
+  and pattern' tenv value_aty p =
+    pattern tenv value_aty (Position.position p) (Position.value p)
+  and pattern tenv (value_aty : aty option) pos p : typing_environment * aty =
+    let rec type_of_pvariable tenv value_aty id =
+      match value_aty with
+      | None     ->
+          let var = fresh () in
+          (bind_value id (Scheme ([ var ], ATyVar var)) tenv, ATyVar var)
+      | Some aty -> (bind_value id (monotype aty) tenv, aty)
+    and type_of_pliteral tenv value_aty literal =
+      match (Position.value literal, value_aty) with
+      | LInt _, Some (ATyCon (TCon "int", [])) | LInt _, None ->
+          (tenv, ATyCon (TCon "int", []))
+      | LChar _, Some (ATyCon (TCon "char", [])) | LChar _, None ->
+          (tenv, ATyCon (TCon "char", []))
+      | LString _, Some (ATyCon (TCon "string", [])) | LString _, None ->
+          (tenv, ATyCon (TCon "string", []))
+      | _ -> failwith "ERROR TODO 1"
+    and type_of_ptagged tenv value_aty (constructor, patterns) = failwith "TODO"
+    and type_of_precord tenv value_aty fields = failwith "TODO"
+    and type_of_ptuple tenv value_aty patterns =
+      match value_aty with
+      | Some (ATyTuple aty_list) ->
+          let tenv_acc = ref tenv in
+          let result =
+            List.map2
+              (fun aty_value pattern ->
+                let tenv', aty' = pattern' !tenv_acc (Some aty_value) pattern in
+                tenv_acc := tenv';
+                aty')
+              aty_list patterns
+          in
+          (!tenv_acc, ATyTuple result)
+      | Some _                   -> failwith "ERROR TODO 2"
+      | None                     ->
+          let tenv_acc = ref tenv in
+          let result =
+            List.map
+              (fun pattern ->
+                let tenv', aty' = pattern' !tenv_acc None pattern in
+                tenv_acc := tenv';
+                aty')
+              patterns
+          in
+          (!tenv_acc, ATyTuple result)
+    and type_of_por tenv value_aty patterns = failwith "TODO"
+    and type_of_pand tenv value_aty patterns = failwith "TODO" in
+    match p with
+    | PVariable id -> type_of_pvariable tenv value_aty (Position.value id)
+    | PWildcard -> (tenv, ATyVar (fresh ()))
+    | PTypeAnnotation (pattern, ty) ->
+        let aty = aty_of_ty (Position.value ty) in
+        ( match value_aty with
+        | None      -> ()
+        | Some aty' -> check_expected_type pos aty aty' );
+        pattern' tenv (Some aty) pattern
+    | PLiteral literal -> type_of_pliteral tenv value_aty literal
+    | PTaggedValue (constructor, _, patterns) ->
+        type_of_ptagged tenv value_aty (constructor, patterns)
+    | PRecord (fields, _) -> type_of_precord tenv value_aty fields
+    | PTuple patterns -> type_of_ptuple tenv value_aty patterns
+    | POr patterns -> type_of_por tenv value_aty patterns
+    | PAnd patterns -> type_of_pand tenv value_aty patterns
+  in
   program ast
 
 let print_typing_environment = HopixTypes.print_typing_environment

@@ -232,7 +232,18 @@ let typecheck tenv ast : typing_environment =
           ( "Unbound constructor `"
           ^ (match Position.value constr with KId s -> s)
           ^ "'." )
-    and type_of_record tenv list = failwith "TODO 1"
+    and type_of_record tenv l =
+      let l' =
+        List.map (fun (label, expr) -> (Position.value label, type_of_expression' tenv expr)) l
+      in
+      List.iter
+        (fun (label, ati) ->
+          let scheme = List.assoc label tenv.destructors in
+          check_expected_type pos ati (type_of_monotype scheme))
+        l';
+        let a = List.find (fun (_,(_,_)) -> true ) tenv.type_constructors in
+        match a with 
+        | type_constructor,(_,_) -> ATyCon (type_constructor, [])
     and type_of_field tenv (expr, (label : label Position.located)) =
       let t_expr = type_of_expression' tenv expr in
       type_of_monotype (lookup_type_scheme_of_label label.value tenv)

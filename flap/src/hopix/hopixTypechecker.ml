@@ -387,8 +387,43 @@ let typecheck tenv ast : typing_environment =
       | LString _, Some (ATyCon (TCon "string", [])) | LString _, None ->
           (tenv, ATyCon (TCon "string", []))
       | _ -> failwith "ERROR TODO 1"
-    and type_of_ptagged tenv value_aty (constructor, ty_args, patterns) =
-      failwith "TODO PTAGGED"
+    and type_of_ptagged tenv (value_aty : aty option)
+        (constructor, ty_args, patterns) : typing_environment * aty =
+      let ty_args = aty_list_of_ty_list_option ty_args in
+      (match value_aty with None -> () | Some _ -> ());
+      try
+        let scheme_pattern =
+          lookup_type_scheme_of_constructor (Position.value constructor) tenv
+        in
+
+        let aty = instantiate_type_scheme scheme_pattern ty_args in
+        let args', result = arg_list_of_function aty in
+        let tenv_ref = ref tenv in
+        let seq () =
+          let rec aux args' args tenv () =
+            match (args', args) with
+            | [], []              -> Seq.Nil
+            | a' :: a's, a :: as_ ->
+                let tenv', aty_p = pattern' tenv None a in
+                tenv_ref := tenv';
+                Seq.Cons
+                  ( (a', Position.with_pos (Position.position a) aty_p),
+                    aux a's as_ tenv' )
+            | _                   -> assert false
+          in
+          aux args' patterns tenv ()
+        in
+        Seq.iter
+          (fun (aty, pat_ty) ->
+            let aty_l = Position.value pat_ty in
+            check_expected_type (Position.position pat_ty) aty aty_l)
+          seq;
+        (!tenv_ref, result)
+      with UnboundConstructor ->
+        type_error pos
+          ( "Unbound constructor `"
+          ^ (match Position.value constructor with KId s -> s)
+          ^ "'." )
     and type_of_precord tenv value_aty fields = failwith "TODO PRECORD"
     and type_of_ptuple tenv value_aty patterns =
       match value_aty with

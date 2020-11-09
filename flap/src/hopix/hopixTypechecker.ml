@@ -11,6 +11,10 @@ let type_error = HopixTypes.type_error
 
 let located f x = f (Position.position x) (Position.value x)
 
+let aty_list_of_ty_list_option ty_list_option =
+  List.map aty_of_ty
+    (List.map Position.value (Option.value ~default:[] ty_list_option))
+
 let rec arg_list_of_function aty =
   match aty with
   | ATyArrow (t1, t2) ->
@@ -191,42 +195,47 @@ let typecheck tenv ast : typing_environment =
     let ity = located (type_of_expression tenv) e in
     check_expected_type pos xty ity
   (* [type_of_expression tenv pos e] computes a type for [e] if it exists. *)
-  and type_of_expression tenv pos : expression -> aty =
+  and type_of_expression tenv pos =
     let rec type_of_literal lit : aty =
       match lit with
       | LInt _    -> ATyCon (TCon "int", [])
       | LString _ -> ATyCon (TCon "string", [])
       | LChar _   -> ATyCon (TCon "char", [])
-    and type_of_variable tenv (id : 'a Position.located) : aty =
-      let scheme = lookup_type_scheme_of_value id.position id.value tenv in
-      match scheme with Scheme (_, ty) -> ty
-    and type_of_tagged tenv constr args =
+    and type_of_variable (id, ty_args) =
+      let aty_args = aty_list_of_ty_list_option ty_args in
+      let scheme =
+        lookup_type_scheme_of_value (Position.position id) (Position.value id)
+          tenv
+      in
+      instantiate_type_scheme scheme aty_args
+    and type_of_tagged tenv (constr, ty_args, args) =
+      let ty_args = aty_list_of_ty_list_option ty_args in
       try
-        match
+        let scheme =
           lookup_type_scheme_of_constructor (Position.value constr) tenv
-        with
-        | Scheme (variables, aty) ->
-            let args', result = arg_list_of_function aty in
-            let seq () =
-              let rec aux args' args () =
-                match (args', args) with
-                | [], []              -> Seq.Nil
-                | a' :: a's, a :: as_ ->
-                    Seq.Cons
-                      ( ( a',
-                          Position.with_pos (Position.position a)
-                            (type_of_expression' tenv a) ),
-                        aux a's as_ )
-                | _                   -> assert false
-              in
-              aux args' args ()
-            in
-            Seq.iter
-              (fun (aty, aty_l) ->
-                check_expected_type (Position.position aty_l) aty
-                  (Position.value aty_l))
-              seq;
-            result
+        in
+        let aty = instantiate_type_scheme scheme ty_args in
+        let args', result = arg_list_of_function aty in
+        let seq () =
+          let rec aux args' args () =
+            match (args', args) with
+            | [], []              -> Seq.Nil
+            | a' :: a's, a :: as_ ->
+                Seq.Cons
+                  ( ( a',
+                      Position.with_pos (Position.position a)
+                        (type_of_expression' tenv a) ),
+                    aux a's as_ )
+            | _                   -> assert false
+          in
+          aux args' args ()
+        in
+        Seq.iter
+          (fun (aty, aty_l) ->
+            check_expected_type (Position.position aty_l) aty
+              (Position.value aty_l))
+          seq;
+        result
       with UnboundConstructor ->
         type_error pos
           ( "Unbound constructor `"
@@ -292,10 +301,8 @@ let typecheck tenv ast : typing_environment =
           (fun branch ->
             match Position.value branch with
             | Branch (pattern, body) ->
-                let tenv', aty_pattern =
-                  pattern' tenv (Some aty_matched) pattern
-                in
-                check_expected_type pos aty_pattern aty_matched;
+                let tenv', _ = pattern' tenv (Some aty_matched) pattern in
+                (*check_expected_type pos aty_pattern aty_matched;*)
                 type_of_expression' tenv' body)
           cases
       in
@@ -326,13 +333,10 @@ let typecheck tenv ast : typing_environment =
         (ATyCon (TCon "int", []));
       let tenv' =
         {
+          tenv with
           values =
             (Position.value var_name, Scheme ([], ATyCon (TCon "int", [])))
             :: tenv.values;
-          constructors = tenv.constructors;
-          destructors = tenv.destructors;
-          type_constructors = tenv.type_constructors;
-          type_variables = tenv.type_variables;
         }
       in
       let t_body = type_of_expression' tenv' body in
@@ -341,8 +345,8 @@ let typecheck tenv ast : typing_environment =
     in
     function
     | Literal lit -> type_of_literal lit.value
-    | Variable (id, _) -> type_of_variable tenv id
-    | Tagged (constr, _, e) -> type_of_tagged tenv constr e
+    | Variable (id, ty_args) -> type_of_variable (id, ty_args)
+    | Tagged (constr, ty_args, e) -> type_of_tagged tenv (constr, ty_args, e)
     | Record (l, _) -> type_of_record tenv l
     | Field (expr, label) -> type_of_field tenv (expr, label)
     | Tuple exprs -> type_of_tuple tenv exprs
@@ -394,8 +398,9 @@ let typecheck tenv ast : typing_environment =
       | LString _, Some (ATyCon (TCon "string", [])) | LString _, None ->
           (tenv, ATyCon (TCon "string", []))
       | _ -> failwith "ERROR TODO 1"
-    and type_of_ptagged tenv value_aty (constructor, patterns) = failwith "TODO"
-    and type_of_precord tenv value_aty fields = failwith "TODO"
+    and type_of_ptagged tenv value_aty (constructor, ty_args, patterns) =
+      failwith "TODO PTAGGED"
+    and type_of_precord tenv value_aty fields = failwith "TODO PRECORD"
     and type_of_ptuple tenv value_aty patterns =
       match value_aty with
       | Some (ATyTuple aty_list) ->
@@ -421,8 +426,8 @@ let typecheck tenv ast : typing_environment =
               patterns
           in
           (!tenv_acc, ATyTuple result)
-    and type_of_por tenv value_aty patterns = failwith "TODO"
-    and type_of_pand tenv value_aty patterns = failwith "TODO" in
+    and type_of_por tenv value_aty patterns = failwith "TODO POR"
+    and type_of_pand tenv value_aty patterns = failwith "TODO PAND" in
     match p with
     | PVariable id -> type_of_pvariable tenv value_aty (Position.value id)
     | PWildcard -> (tenv, ATyVar (fresh ()))
@@ -433,8 +438,8 @@ let typecheck tenv ast : typing_environment =
         | Some aty' -> check_expected_type pos aty aty' );
         pattern' tenv (Some aty) pattern
     | PLiteral literal -> type_of_pliteral tenv value_aty literal
-    | PTaggedValue (constructor, _, patterns) ->
-        type_of_ptagged tenv value_aty (constructor, patterns)
+    | PTaggedValue (constructor, ty_args, patterns) ->
+        type_of_ptagged tenv value_aty (constructor, ty_args, patterns)
     | PRecord (fields, _) -> type_of_precord tenv value_aty fields
     | PTuple patterns -> type_of_ptuple tenv value_aty patterns
     | POr patterns -> type_of_por tenv value_aty patterns

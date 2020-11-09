@@ -458,7 +458,7 @@ l2:
     - La documentation combinée d'Intel (5000+ pages), disponible sur la
       [[https://software.intel.com/content/www/us/en/develop/download/intel-64-and-ia-32-architectures-sdm-combined-volumes-1-2a-2b-2c-2d-3a-3b-3c-3d-and-4.html][page]]
       du constructeur.
-* Cours 8 : Assembleur x86-64 <2020-11-02>
+* Cours 8 : Assembleur x86-64 et Retrolix, bis <2020-11-02>
 ** Programmation en assembleur x86-64
 *** L'état du processeur
     Les instructions x86-64 servent à modifier l'état du processeur qui, en ce
@@ -584,7 +584,8 @@ l2:
      - ~jmp *%rax~ : saute à l'adresse de code contenue par %rax.
 
      *Attention* : à l'exécution d'une instruction de saut, %rsp+8 doit toujours
-     être aligné sur 16 octets.
+     être aligné sur 16 octets. Donc, %rsp doit être aligné sur 16 octets avant
+     toute instruction ~call~, puisque celle-ci va pousser l'adresse de retour.
 
      Encore une fois, je vous renvoie aux notes d'Andrew Tolmach.
 *** Quelques exemples
@@ -641,22 +642,23 @@ l2:
       obtient l'assembleur ci-dessous.
 
  #+BEGIN_SRC asm
-      factr:  pushq %rbp
-              movq %rsp, %rbp
-              subq $8, %rsp
-              cmp $1, %rdi
-              jle factr0
-              movq %rdi, -8(%rbp)
-              dec %rdi
-              call factr
-              imulq -8(%rbp), %rax
-              addq $8, %rsp
-              popq %rbp
-              ret
-      factr0: movq $1, %rax
-              addq $8, %rsp
-              popq %rbp
-              ret
+      fact:  pushq %rbp
+             movq %rsp, %rbp
+             subq $8, %rsp
+             movq $1, %rax
+             cmp $1, %rdi
+             jle fact0
+             movq %rdi, -8(%rbp)
+             dec %rdi
+             call fact
+             imulq -8(%rbp), %rax
+             addq $8, %rsp
+             popq %rbp
+             ret
+      fact0: movq $1, %rax
+             addq $8, %rsp
+             popq %rbp
+             ret
  #+END_SRC
 
       *Attention* : dans le code ci-dessus, on a négligé la contrainte
@@ -664,3 +666,311 @@ l2:
       System V. Ce n'est pas gênant dans la mesure où on appelle jamais de
       fonction de la bibliothèque standard ici. Dans votre passe Retrolix vers
       x86-64, vous *devez* respecter cette contrainte.
+* Cours 9 : Assembleur x86-64 et Retrolix, ter <2020-11-09>
+** Quelques exemples (suite)
+*** Factorielle récursive naïve.
+    On écrit le code de factorielle dans un style récursif naïf, l'équivalent
+    du code OCaml suivant :
+
+#+BEGIN_SRC ocaml
+    let rec fact n = if n <= 1 then 1 else n * fact (n - 1)
+#+END_SRC
+
+**** Solution
+     En écrivant du code mécaniquement, comme un compilateur très naïf, on
+     obtient l'assembleur ci-dessous.
+
+#+BEGIN_SRC asm
+     factr:  pushq %rbp
+             movq %rsp, %rbp
+             subq $8, %rsp
+             cmp $1, %rdi
+             jle factr0
+             movq %rdi, -8(%rbp)
+             dec %rdi
+             call factr
+             imulq -8(%rbp), %rax
+             addq $8, %rsp
+             popq %rbp
+             ret
+     factr0: movq $1, %rax
+             addq $8, %rsp
+             popq %rbp
+             ret
+#+END_SRC
+
+     *Attention* : dans le code ci-dessus, on a négligé la contrainte
+     d'alignement de la pile à chaque call, ne respectant pas strictement l'ABI
+     System V. Ce n'est pas gênant dans la mesure où on appelle jamais de
+     fonction de la bibliothèque standard ici. Dans votre passe Retrolix vers
+     x86-64, vous *devez* respecter cette contrainte.
+** De Retrolix à x86-64
+*** Retrolix
+    Le code relatif à Retrolix est contenu dans
+    [[file://../flap/src/retrolix][src/retrolix/]]. Commencer par lire l'AST
+    présent dans retrolixAST.ml, puis en cas de question, regarder la sémantique
+    de référence dictée par l'interprète dans retrolixInterpreter.ml.
+
+    Il s'agit d'un langage presque aussi bas niveau que l'assembleur, mais pas
+    tout à fait. Quelques caractéristiques :
+
+    - des registres (x86-64) *et* des variables (locales, globales, paramètres),
+
+    - le registre matériel %r15 est *réservé* (jamais utilisé),
+
+    - respecte la convention d'appel en ce qui concerne les registres (registres
+      caller-save vs. callee-save, registre stockant la valeur de retour),
+
+    - un jeu d'instruction bas niveau.
+
+    *Attention* : les six premiers arguments sont passés par %rdi, %rsi,
+    etc. Donc les arguments déclarés et passés explicitement en Retrolix sont
+    ceux qui viennent des fonctions sources (Fopix) qui avaient plus de six
+    arguments au départ !
+
+*** x86-64
+    Le code est contenu dans [[file://../flap/src/x86-64][src/x86-64/]], et
+    l'AST qui nous intéresse est dans
+    [[file://../flap/src/x86-64/x86_64_AST.ml][x86_64_AST.ml]]. Pas d'interprète
+    ou parser.
+
+    On a vu les points saillants de l'assembleur x86-64 la dernière fois.
+
+    Remarque : comme on utilise GCC pour l'assemblage et l'édition de liens, nos
+    programmes assembleurs doivent disposer d'une fonction main().
+
+    *Attention* : l'AST est *trop permissif* ! Il permet d'écrire du code qui
+    n'assemble pas, par exemple ~movq (%rsp), (%rsp)~. Éviter de générer ce
+    genre de code fait partie de votre travail.
+
+*** Différences entre Retrolix et x86-64
+
+    - des chaînes litérales en Retrolix,
+
+    - en Retrolix, pas de fonction main(), le point d'entrée du programme est la
+      séquence des blocs d'initialisation de ses variables globales,
+
+    - pas de variables en x86-64,
+
+    - jeu d'instructions assez différent : Retrolix est plutôt RISC mais x86-64
+      est très CISC ; par exemple :
+
+      * trois adresses vs. deux adresses,
+
+      * modes d'adressage et opérandes mémoires limités en x86-64,
+
+      * bizarreries en x86-64, par exemple la division.
+
+*** Traduire Retrolix vers x86-64
+    Certaines des différences que nous venons de décrire ne sont pas
+    essentielles, et sont donc déjà traitées pour vous (chaînes litérales,
+    génération d'un main, ...). On va se concentrer sur deux points :
+
+    - la traduction des constructions Retrolix en assembleur x86-64,
+
+    - la gestion des variables et de la pile.
+
+    La passe de traduction est dans
+    [[file://../flap/src/x86-64/retrolixToX86_64.ml][retrolixToX86_64.ml]]. Vous
+    devez remplacer les ~failwith "Students!"~ avec le code approprié.
+
+    Il s'agit essentiellement d'implémenter deux modules, InstructionSelector et
+    FrameManager. Le premier se charge de la traduction de construction
+    atomiques de Retrolix en x86-64, le second de la gestion de la pile et des
+    variables. Le second va naturellement faire appel au premier.
+
+    *Attention* : dans ce jalon, on se concentrera sur la *correction* du code
+    généré. Produire du code optimisé est un objectif secondaire.
+**** Points à gérer
+
+***** Bases de la gestion de la pile
+
+      Considérons la fonction ci-dessous.
+
+#+BEGIN_SRC
+      def f(x, y)
+      local a, b, c:
+        ...
+      end
+#+END_SRC
+
+      En suivant l'ABI System V, à quoi doit ressembler son cadre de pile après
+      l'exécution de son prologue ? Quel est le code du prologue, d'ailleurs ?
+      De l'épilogue ?
+
+****** Indications
+
+     Prologue :
+
+#+BEGIN_SRC asm
+       pushq %rbp
+       movq %rsp, %rbp
+       subq $24, %rsp
+#+END_SRC
+
+     Épilogue :
+
+#+BEGIN_SRC asm
+       addq $24, %rsp
+       popq %rbp
+       ret
+#+END_SRC
+
+     Disposition de la pile :
+
+     | cadre parent |        |
+     |--------------+--------|
+     | arg y        |        |
+     | arg x        |        |
+     | saved %rip   |        |
+     | saved %rbp   | <- rbp |
+     | var a        |        |
+     | var b        |        |
+     | var c        | <- rsp |
+
+     Notons que l'ABI nous laisse le choix de l'ordre des variables locales.
+
+***** Bases de la traduction
+
+      Comment traduire les instructions Retrolix suivantes ?
+
+#+BEGIN_SRC asm
+        %rax <- load 42;
+#+END_SRC
+
+#+BEGIN_SRC asm
+        %rax <- add %rax, %rbx;
+#+END_SRC
+
+#+BEGIN_SRC asm
+        %rax <- add %rbx, %rcx;
+#+END_SRC
+
+#+BEGIN_SRC asm
+        %rax <- div %rbx, %rcx;
+#+END_SRC
+
+      Comment traduire l'instruction suivante, si a est une variable locale (par
+      exemple la première) ? Le premier paramètre de la fonction Retrolix
+      courante ? Une variable globale ?
+
+#+BEGIN_SRC asm
+         a <- load 42;
+#+END_SRC
+
+      Dans les instructions ci-dessous, on se place dans le corps d'une fonction
+      dont les variables locales sont a, b et c, déclarées dans cet ordre.
+
+#+BEGIN_SRC asm
+         %rax <- add %rax, a;
+#+END_SRC
+
+#+BEGIN_SRC asm
+         a <- add a, %rax;
+#+END_SRC
+
+#+BEGIN_SRC asm
+         a <- add a, b;
+#+END_SRC
+
+#+BEGIN_SRC asm
+         a <- add b, c;
+#+END_SRC
+
+****** Indications
+
+       Pour les instructions élémentaires :
+
+#+BEGIN_SRC asm
+        movq $42, %rax
+#+END_SRC
+
+#+BEGIN_SRC asm
+        addq %rbx, %rax
+#+END_SRC
+
+#+BEGIN_SRC asm
+        movq %rbx, %rax
+        addq %rcx, %rax
+#+END_SRC
+
+#+BEGIN_SRC asm
+        movq %rdx, %r15
+        movq %rbx, %rax
+        cqto
+        idivq %rcx
+        mocq %r15, %rdx
+#+END_SRC
+
+      Traduction de ~a <- load 42~ lorsque ~a~ est :
+
+      - la première variable locale dans la pile
+
+#+BEGIN_SRC asm
+         movq $42, -8(%rbp)
+#+END_SRC
+
+      - un paramètre Retrolix (le premier)
+
+#+BEGIN_SRC asm
+         movq $42, 16(%rbp)
+#+END_SRC
+
+      - une variable globale, stockée au label ~a~
+
+#+BEGIN_SRC asm
+         movq $42, a
+#+END_SRC
+
+      La traduction du reste des exemples :
+
+#+BEGIN_SRC asm
+         addq -8(%rbp), %rax
+#+END_SRC
+
+#+BEGIN_SRC asm
+         addq %rax, -8(%rbp)
+#+END_SRC
+
+#+BEGIN_SRC asm
+         movq -16(%rbp), %r15
+         addq %r15, -8(%rbp)
+#+END_SRC
+
+#+BEGIN_SRC asm
+         movq -24(%rbp), %r15
+         addq -16(%rbp), %r15
+         movq %r15, -8(%rbp)
+#+END_SRC
+
+***** Convention d'appel
+
+      Comment traduire les appels de fonction ?
+
+#+BEGIN_SRC asm
+      def f()
+        call g(23, %rax, %rbx)
+#+END_SRC
+
+      N'oubliez pas qu'il faut aussi traiter les appels de fonction *terminaux*.
+
+****** Indications
+
+#+BEGIN_SRC asm
+f:     pushq %rbp
+       movq %rsp, %rbp
+       subq $8, %rsp    # sert à aligner la pile sur 16 octets pour le call
+       pushq %rbx       # argument 3
+       pushq %rax       # argument 2
+       pushq $23        # argument 1
+       call g           # appel (la pile est bien alignée sur 16 octets !)
+       addq $32, %rsp   # libère les arguments sur la pile
+       movq %rbp, %rsp
+       popq %rbp
+       ret
+#+END_SRC
+
+#+BEGIN_SRC asm
+      def f()
+        call g(23, %rax, %rbx) tail
+#+END_SRC

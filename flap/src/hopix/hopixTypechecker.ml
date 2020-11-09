@@ -9,6 +9,45 @@ type typing_environment = HopixTypes.typing_environment
 
 let type_error = HopixTypes.type_error
 
+let pattern_error pos =
+  type_error pos "This pattern is not compatible with the matched value."
+
+let instantiate_type_scheme pos a b =
+  try instantiate_type_scheme a b
+  with InvalidInstantiation (expected, given) ->
+    type_error pos
+      (Printf.sprintf
+         "Invalid number of types in instantiation: %d given while %d were \
+          expected."
+         given expected)
+
+let lookup_type_scheme_of_label_for_record pos label tenv =
+  try lookup_type_scheme_of_label label tenv
+  with UnboundLabel ->
+    type_error pos
+      (Printf.sprintf "There is no type definition for the label `%s'."
+         (match label with LId s -> s))
+
+let lookup_type_scheme_of_label_for_field pos label tenv =
+  try lookup_type_scheme_of_label label tenv
+  with UnboundLabel ->
+    type_error pos
+      (Printf.sprintf "Label `%s' is unbound." (match label with LId s -> s))
+
+let lookup_type_scheme_of_value pos x env =
+  try lookup_type_scheme_of_value pos x env
+  with UnboundIdentifier (pos, id) ->
+    type_error pos
+      (Printf.sprintf "Unbound value `%s'." (match id with Id s -> s))
+
+let check_expected_field_type pos label aty_1 aty_2 =
+  if aty_1 <> aty_2 then
+    type_error pos
+      (Printf.sprintf
+         "The field `%s` as type `%s' while it should have type `%s'."
+         (match label with LId s -> s)
+         (print_aty aty_1) (print_aty aty_2))
+
 let located f x = f (Position.position x) (Position.value x)
 
 let aty_list_of_ty_list_option ty_list_option =
@@ -207,14 +246,14 @@ let typecheck tenv ast : typing_environment =
         lookup_type_scheme_of_value (Position.position id) (Position.value id)
           tenv
       in
-      instantiate_type_scheme scheme aty_args
+      instantiate_type_scheme pos scheme aty_args
     and type_of_tagged tenv (constr, ty_args, args) =
       let ty_args = aty_list_of_ty_list_option ty_args in
       try
         let scheme =
           lookup_type_scheme_of_constructor (Position.value constr) tenv
         in
-        let aty = instantiate_type_scheme scheme ty_args in
+        let aty = instantiate_type_scheme pos scheme ty_args in
         let args', result = arg_list_of_function aty in
         let seq () =
           let rec aux args' args () =
@@ -226,7 +265,9 @@ let typecheck tenv ast : typing_environment =
                       Position.with_pos (Position.position a)
                         (type_of_expression' tenv a) ),
                     aux a's as_ )
-            | _                   -> assert false
+            | _                   ->
+                check_expected_type pos aty result;
+                assert false
           in
           aux args' args ()
         in
@@ -241,21 +282,47 @@ let typecheck tenv ast : typing_environment =
           ( "Unbound constructor `"
           ^ (match Position.value constr with KId s -> s)
           ^ "'." )
-    and type_of_record tenv l =
+    and type_of_record tenv (l, ty_args) =
+      let aty_args = aty_list_of_ty_list_option ty_args in
       let l' =
-        List.map (fun (label, expr) -> (Position.value label, type_of_expression' tenv expr)) l
+        List.map
+          (fun (label, expr) ->
+            (Position.value label, type_of_expression' tenv expr))
+          l
       in
       List.iter
-        (fun (label, ati) ->
-          let scheme = List.assoc label tenv.destructors in
-          check_expected_type pos ati (type_of_monotype scheme))
+        (fun (label, aty) ->
+          let scheme = lookup_type_scheme_of_label_for_record pos label tenv in
+          let aty_field =
+            match instantiate_type_scheme pos scheme aty_args with
+            | ATyArrow (_, aty) -> aty
+            | _                 -> failwith "ERROR TODO 6"
+          in
+          check_expected_field_type pos label aty aty_field)
         l';
-        let a = List.find (fun (_,(_,_)) -> true ) tenv.type_constructors in
-        match a with 
-        | type_constructor,(_,_) -> ATyCon (type_constructor, [])
+      let a =
+        List.find
+          (fun (_, (_, type_info)) ->
+            match type_info with
+            | Abstract -> false
+            | Sum _    -> false
+            | Record _ -> true)
+          tenv.type_constructors
+      in
+      match a with
+      | type_constructor, (_, _) -> ATyCon (type_constructor, aty_args)
     and type_of_field tenv (expr, (label : label Position.located)) =
       let t_expr = type_of_expression' tenv expr in
-      type_of_monotype (lookup_type_scheme_of_label label.value tenv)
+      match t_expr with
+      | ATyCon (_, aty_args) -> (
+          match
+            instantiate_type_scheme pos
+              (lookup_type_scheme_of_label_for_field pos label.value tenv)
+              aty_args
+          with
+          | ATyArrow (_, aty) -> aty
+          | _                 -> failwith "ERROR TODO 7" )
+      | _                    -> failwith "ERROR TODO 5"
     and type_of_tuple tenv tuple =
       ATyTuple (List.map (type_of_expression' tenv) tuple)
     and type_of_sequence tenv seq =
@@ -279,7 +346,7 @@ let typecheck tenv ast : typing_environment =
           let t_real_arg = type_of_expression' tenv args in
           check_expected_type (Position.position args) t_expected_arg t_real_arg;
           t_result
-      | aty -> failwith (print_aty aty ^ " is not a function")
+      | aty -> type_error pos "Only functions can be applied."
     and type_of_ref tenv ref =
       let inner_type = type_of_expression' tenv ref in
       ATyCon (TCon "mut", [ inner_type ])
@@ -347,7 +414,7 @@ let typecheck tenv ast : typing_environment =
     | Literal lit -> type_of_literal lit.value
     | Variable (id, ty_args) -> type_of_variable (id, ty_args)
     | Tagged (constr, ty_args, e) -> type_of_tagged tenv (constr, ty_args, e)
-    | Record (l, _) -> type_of_record tenv l
+    | Record (l, ty_args) -> type_of_record tenv (l, ty_args)
     | Field (expr, label) -> type_of_field tenv (expr, label)
     | Tuple exprs -> type_of_tuple tenv exprs
     | Sequence seq -> type_of_sequence tenv seq
@@ -365,10 +432,10 @@ let typecheck tenv ast : typing_environment =
     | For (id, bound_low, bound_high, body) ->
         type_of_for tenv (id, bound_low, bound_high, body)
     | TypeAnnotation (e, ta) ->
-        let aty_expr = type_of_expression' tenv e in
         let aty_annotation = aty_of_ty' ta in
-        if aty_expr = aty_annotation then aty_annotation
-        else type_error pos "annotation not conforming to type value"
+        let aty_expr = type_of_expression' tenv e in
+        check_expected_type pos aty_expr aty_annotation;
+        aty_annotation
   and type_of_expression' tenv expr =
     type_of_expression tenv expr.position expr.value
   (*and patterns tenv = function
@@ -397,17 +464,15 @@ let typecheck tenv ast : typing_environment =
           (tenv, ATyCon (TCon "char", []))
       | LString _, Some (ATyCon (TCon "string", [])) | LString _, None ->
           (tenv, ATyCon (TCon "string", []))
-      | _ -> failwith "ERROR TODO 1"
-    and type_of_ptagged tenv (value_aty : aty option)
-        (constructor, ty_args, patterns) : typing_environment * aty =
+      | _ -> pattern_error pos
+    and type_of_ptagged tenv value_aty (constructor, ty_args, patterns) =
       let ty_args = aty_list_of_ty_list_option ty_args in
-      (match value_aty with None -> () | Some _ -> ());
       try
         let scheme_pattern =
           lookup_type_scheme_of_constructor (Position.value constructor) tenv
         in
 
-        let aty = instantiate_type_scheme scheme_pattern ty_args in
+        let aty = instantiate_type_scheme pos scheme_pattern ty_args in
         let args', result = arg_list_of_function aty in
         let tenv_ref = ref tenv in
         let seq () =
@@ -429,13 +494,48 @@ let typecheck tenv ast : typing_environment =
             let aty_l = Position.value pat_ty in
             check_expected_type (Position.position pat_ty) aty aty_l)
           seq;
+        ( match value_aty with
+        | None     -> ()
+        | Some aty -> check_expected_type pos aty result );
         (!tenv_ref, result)
       with UnboundConstructor ->
         type_error pos
           ( "Unbound constructor `"
           ^ (match Position.value constructor with KId s -> s)
           ^ "'." )
-    and type_of_precord tenv value_aty fields = failwith "TODO PRECORD"
+    and type_of_precord tenv value_aty (fields, ty_args) =
+      let aty_args = aty_list_of_ty_list_option ty_args in
+      let tenv_ref = ref tenv in
+      List.iter
+        (fun (label, pattern) ->
+          let label = Position.value label in
+          let scheme = lookup_type_scheme_of_label_for_record pos label tenv in
+          let aty_field =
+            match instantiate_type_scheme pos scheme aty_args with
+            | ATyArrow (_, aty) -> aty
+            | _                 -> assert false
+          in
+          let tenv', aty = pattern' tenv (Some aty_field) pattern in
+          tenv_ref := tenv';
+          check_expected_field_type pos label aty aty_field) (* ? *)
+        fields;
+      let a =
+        List.find
+          (fun (_, (_, type_info)) ->
+            match type_info with
+            | Abstract -> false
+            | Sum _    -> false
+            | Record _ -> true)
+          tenv.type_constructors
+      in
+      let aty_result =
+        match a with
+        | type_constructor, (_, _) -> ATyCon (type_constructor, aty_args)
+      in
+      ( match value_aty with
+      | None     -> ()
+      | Some aty -> if aty <> aty_result then pattern_error pos );
+      (!tenv_ref, aty_result)
     and type_of_ptuple tenv value_aty patterns =
       match value_aty with
       | Some (ATyTuple aty_list) ->
@@ -449,7 +549,7 @@ let typecheck tenv ast : typing_environment =
               aty_list patterns
           in
           (!tenv_acc, ATyTuple result)
-      | Some _                   -> failwith "ERROR TODO 2"
+      | Some _                   -> pattern_error pos
       | None                     ->
           let tenv_acc = ref tenv in
           let result =
@@ -461,11 +561,28 @@ let typecheck tenv ast : typing_environment =
               patterns
           in
           (!tenv_acc, ATyTuple result)
-    and type_of_por tenv value_aty patterns = failwith "TODO POR"
-    and type_of_pand tenv value_aty patterns = failwith "TODO PAND" in
+    and type_of_por tenv value_aty patterns =
+      let tenv_ref = ref tenv in
+      let aty_ref = ref None in
+      List.iter
+        (fun pattern ->
+          let tenv', aty = pattern' !tenv_ref value_aty pattern in
+          ( match !aty_ref with
+          | None              -> ()
+          | Some previous_aty -> check_expected_type pos previous_aty aty );
+          tenv_ref := tenv';
+          aty_ref := Some aty)
+        patterns;
+      (!tenv_ref, Option.get !aty_ref)
+    and type_of_pand tenv value_aty patterns =
+      type_of_por tenv value_aty patterns
+    in
     match p with
     | PVariable id -> type_of_pvariable tenv value_aty (Position.value id)
-    | PWildcard -> (tenv, ATyVar (fresh ()))
+    | PWildcard -> (
+        match value_aty with
+        | None     -> (tenv, ATyVar (fresh ()))
+        | Some aty -> (tenv, aty) )
     | PTypeAnnotation (pattern, ty) ->
         let aty = aty_of_ty (Position.value ty) in
         ( match value_aty with
@@ -475,7 +592,8 @@ let typecheck tenv ast : typing_environment =
     | PLiteral literal -> type_of_pliteral tenv value_aty literal
     | PTaggedValue (constructor, ty_args, patterns) ->
         type_of_ptagged tenv value_aty (constructor, ty_args, patterns)
-    | PRecord (fields, _) -> type_of_precord tenv value_aty fields
+    | PRecord (fields, ty_args) ->
+        type_of_precord tenv value_aty (fields, ty_args)
     | PTuple patterns -> type_of_ptuple tenv value_aty patterns
     | POr patterns -> type_of_por tenv value_aty patterns
     | PAnd patterns -> type_of_pand tenv value_aty patterns

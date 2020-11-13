@@ -127,9 +127,6 @@ and literal =
   | LInt    of Mint.t
   | LString of string
   | LChar   of char
-
-
-
 and identifier =
   | Id of string
 
@@ -147,5 +144,6 @@ and label =
 
 and t = program
 
+type elt = definition located
 
 [@@deriving sexp]

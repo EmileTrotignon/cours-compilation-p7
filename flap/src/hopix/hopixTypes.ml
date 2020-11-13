@@ -29,15 +29,15 @@ let fresh = make_fresh_name_generator ()
 
 let rec hprod_destruct = function
   | ATyTuple tys -> List.(flatten (map hprod_destruct tys))
-  | ty -> [ ty ]
+  | ty           -> [ ty ]
 
 let hprod tys = ATyTuple List.(flatten (map hprod_destruct tys))
 
 let rec aty_of_ty = function
-  | TyVar x -> ATyVar x
-  | TyCon (t, ts) -> ATyCon (t, List.map aty_of_ty' ts)
+  | TyVar x            -> ATyVar x
+  | TyCon (t, ts)      -> ATyCon (t, List.map aty_of_ty' ts)
   | TyArrow (ins, out) -> ATyArrow (aty_of_ty' ins, aty_of_ty' out)
-  | TyTuple ins -> hprod (List.map aty_of_ty' ins)
+  | TyTuple ins        -> hprod (List.map aty_of_ty' ins)
 
 and aty_of_ty' x = aty_of_ty (Position.value x)
 
@@ -56,18 +56,18 @@ let pretty_print_aty bound_vars aty =
     | TId x -> x
   in
   let rec print_aty = function
-    | ATyVar x -> print_var x
+    | ATyVar x            -> print_var x
     | ATyArrow (ins, out) ->
         let ins = print_aty' ins in
         let out = print_aty' out in
         ins ^ " -> " ^ out
-    | ATyTuple tys -> String.concat " * " (List.map print_aty' tys)
+    | ATyTuple tys        -> String.concat " * " (List.map print_aty' tys)
     | ATyCon (TCon x, []) -> x
     | ATyCon (TCon x, ts) ->
         x ^ "<" ^ String.concat ", " (List.map print_aty' ts) ^ ">"
   and print_aty' = function
     | ATyArrow (_, _) as t -> "(" ^ print_aty t ^ ")"
-    | x -> print_aty x
+    | x                    -> print_aty x
   in
   let s = print_aty aty in
   (s, !r)
@@ -83,13 +83,13 @@ let rec destruct_arrows = function
   | ATyArrow (ins, out) ->
       let ins', out = destruct_arrows out in
       (ins :: ins', out)
-  | ty -> ([], ty)
+  | ty                  -> ([], ty)
 
 exception NotAFunction
 
 let output_type_of_function = function
   | ATyArrow (_, ty) -> ty
-  | _ -> raise NotAFunction
+  | _                -> raise NotAFunction
 
 let constant x = (TCon x, ATyCon (TCon x, []))
 
@@ -120,17 +120,17 @@ module TypeVariableSet = Set.Make (struct
 end)
 
 let rec occurs x = function
-  | ATyVar tv -> x = tv
-  | ATyCon (_, tys) -> List.exists (occurs x) tys
+  | ATyVar tv           -> x = tv
+  | ATyCon (_, tys)     -> List.exists (occurs x) tys
   | ATyArrow (ins, out) -> List.exists (occurs x) [ out; ins ]
-  | ATyTuple tys -> List.exists (occurs x) tys
+  | ATyTuple tys        -> List.exists (occurs x) tys
 
 let free_type_variables ty =
   let rec aux accu = function
-    | ATyVar tv -> TypeVariableSet.add tv accu
-    | ATyCon (_, tys) -> aux' accu tys
+    | ATyVar tv           -> TypeVariableSet.add tv accu
+    | ATyCon (_, tys)     -> aux' accu tys
     | ATyArrow (ins, out) -> aux (aux accu out) ins
-    | ATyTuple tys -> aux' accu tys
+    | ATyTuple tys        -> aux' accu tys
   and aux' accu = function [] -> accu | ty :: tys -> aux' (aux accu ty) tys in
   TypeVariableSet.elements (aux TypeVariableSet.empty ty)
 
@@ -144,15 +144,15 @@ exception NotAMonotype
 
 let type_of_monotype = function
   | Scheme ([], ty) -> ty
-  | _ -> raise NotAMonotype
+  | _               -> raise NotAMonotype
 
 exception InvalidInstantiation of int * int
 
 let rec substitute phi = function
-  | ATyVar tv -> ( try List.assoc tv phi with Not_found -> ATyVar tv )
+  | ATyVar tv           -> ( try List.assoc tv phi with Not_found -> ATyVar tv )
   | ATyArrow (ins, out) -> ATyArrow (substitute phi ins, substitute phi out)
-  | ATyCon (t, tys) -> ATyCon (t, List.map (substitute phi) tys)
-  | ATyTuple tys -> hprod (List.map (substitute phi) tys)
+  | ATyCon (t, tys)     -> ATyCon (t, List.map (substitute phi) tys)
+  | ATyTuple tys        -> hprod (List.map (substitute phi) tys)
 
 let instantiate_type_scheme (Scheme (ts, ty)) types =
   if List.(length ts <> length types) then
@@ -202,7 +202,7 @@ let check_well_formed_type pos env ty =
             type_error pos "Ill-formed type: invalid arity."
         with Not_found ->
           type_error pos "Ill-formed type: unbound type constructor." )
-    | ATyTuple tys -> List.iter aux tys
+    | ATyTuple tys        -> List.iter aux tys
     | ATyArrow (ins, out) ->
         aux ins;
         aux out
@@ -294,9 +294,9 @@ let bind_record_type_definition x ts fs env =
   { env with type_constructors; destructors }
 
 let bind_type_definition x ts tenv = function
-  | DefineSumType ks -> bind_sum_type_definition x ts ks tenv
+  | DefineSumType ks    -> bind_sum_type_definition x ts ks tenv
   | DefineRecordType fs -> bind_record_type_definition x ts fs tenv
-  | Abstract -> bind_abstract_type x ts tenv
+  | Abstract            -> bind_abstract_type x ts tenv
 
 exception UnboundConstructor
 

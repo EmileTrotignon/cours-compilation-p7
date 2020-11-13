@@ -8,12 +8,16 @@ module AST = HopixAST
 
 type ast = HopixAST.t
 let parse lexer_init input =
-  process ~lexer_init
+  SyntacticAnalysis.process ~lexer_init
     ~lexer_fun:(fun buf ->
       let tok = HopixLexer.token buf in
       (* Printf.printf "%s\n" (HopixASTHelper.string_of_token tok) ;*)
       tok)
-    ~parser_fun:HopixParser.program ~input
+    ~parser_fun:(fun lexer lexbuf ->
+      try HopixParser.program lexer lexbuf
+      with HopixParser.Error ->
+        Error.error "parsing" (Position.cpos lexbuf) "Syntax error.")
+    ~input
 
 let parse_filename filename =
   if Options.get_use_sexp_in () then

@@ -149,8 +149,8 @@ let register_globals global_set env =
 
 module type InstructionSelector =
   sig
-    (** [mov ~dst ~srcl ~srcr] generates the x86-64 assembly listing to copy
-        [src] into [dst]. *)
+    (** [mov ~dst ~src] generates the x86-64 assembly listing to copy [src] into
+        [dst]. *)
     val mov : dst:T.dst -> src:T.src -> T.line list
 
     (** [add ~dst ~srcl ~srcr] generates the x86-64 assembly listing to store

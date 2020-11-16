@@ -723,10 +723,10 @@ l2:
 
     - un jeu d'instruction bas niveau.
 
-    *Attention* : les six premiers arguments sont passés par %rdi, %rsi,
-    etc. Donc les arguments déclarés et passés explicitement en Retrolix sont
-    ceux qui viennent des fonctions sources (Fopix) qui avaient plus de six
-    arguments au départ !
+    *Attention* : les six premiers arguments sont passés par %rdi, %rsi, %rdx,
+    %rcx, %r8, %r9. Donc les arguments déclarés et passés explicitement en
+    Retrolix sont ceux qui viennent des fonctions sources (Fopix) qui avaient
+    plus de six arguments au départ !
 
 *** x86-64
     Le code est contenu dans [[file://../flap/src/x86-64][src/x86-64/]], et
@@ -974,3 +974,224 @@ f:     pushq %rbp
       def f()
         call g(23, %rax, %rbx) tail
 #+END_SRC
+* Cours 10 : De Fopix à Retrolix <2020-11-16>
+** Où en est-on dans le cours ?
+   Vu le temps qu'il nous reste, on va sauter certains jalons, dont celui-ci. Le
+   dernier jalon sera consacré à la traduction de Hobix à Fopix, puisqu'elle est
+   la plus intéressante, discutée la semaine prochaine.
+** Présentation de Fopix
+   Lecture de l'AST Fopix présent dans le fichier
+   [[file://../flap/src/fopix/fopixAST.ml][fopixAST.ml]].
+** Fopix et Retrolix, similarités et différences
+*** Similarités
+    Langages de premier ordre avec possibilité de saut indirect.
+
+    Litéraux identiques.
+*** Différences
+    Retrolix a des registres machines.
+
+    Retrolix suit la convention d'appel machine.
+
+    Fopix est un langage à base d'expressions de profondeur arbitraire plutôt
+    que d'instructions au format trois adresses.
+
+    Fopix a des && et des || court-circuits.
+
+    Fopix dispose d'instructions de gestion du flot de contrôle structurées.
+
+    Fopix a des déclarations locales internes aux fonctions, tandis que
+    Retrolix ne dispose que d'un espace de nom pour toute fonction (ou
+    initialiseur de variable globale).
+
+    Plus subtil : Fopix accède à la mémoire à travers des blocs. La syntaxe
+    concrète des affectations prend la forme
+
+      block_e[index_e] := val_e
+
+    tandis que les déréférences prennent la forme
+
+      block_e[index_e].
+
+    Ces constructions sont traduites vers des appels à write_block() et
+    read_block() dans la syntaxe abstraite, cf. ~fopixInterpreter.ml~.
+** Aparté : un détail négligé en Retrolix et x86-64
+    Les programmes que nous allons compiler vont reposer sur un exécutif
+    (/runtime/), c'est à dire du code d'infrastructure.
+
+    En ce qui nous concerne, ce runtime prendra la forme d'un fichier écrit en C
+    et concernera notamment des fonctions utiles à la gestion mémoire.
+
+#+BEGIN_SRC C
+      location_t allocate_block(int64_t size);
+      value_t read_block(location_t block, int64_t index);
+      void write_block(location_t block, int64_t index, value_t v);
+#+END_SRC
+
+    Il contient aussi du code d'entrée/sortie, ou de comparaisons de certains
+    types de données (notamment les chaînes de caractères).
+
+    *Attention* : la grande différence entre le tas et la pile, en termes de
+    gestion de la mémoire, est que les données sur la pile sont libérées
+    automatiquement en fonction du flot de contrôle (une fonction libère son
+    cadre de pile quand elle retourne à son appelant). Pour libérer la mémoire
+    du tas, on utilise typiquement un /garbage-collector/ (ou ramasse-miettes,
+    ou glanneur de cellules).
+
+    (Flap ne comprend pas de ramasse-miettes actuellement.)
+
+    Un ramasse-miettes parcourt la mémoire pour détecter si des blocs de mémoire
+    ne sont plus /atteignables/. Un bloc est /atteignable/ si l'on peut obtenir
+    son adresse en lisant des pointeurs depuis les registres et la pile. Un bloc
+    qui n'est pas atteignable peut être libéré, puisque notre programme ne
+    pourra plus jamais y accéder.
+** Quelles sont les difficultés de la traduction de Fopix en Retrolix ?
+*** Passage des expressions au code à trois adresses ; structures de contrôle
+    Comment compiler vers Retrolix les expressions Fopix suivantes ?
+
+    On pourra supposer que le résultat de chaque expression doit être stocké
+    vers une variable locale baptisée "r" et, bien sûr, utiliser autant de
+    variables locales que nécessaire (elles sont là pour ça).
+
+    À ce stade, on ne cherche pas *du tout* à optimiser le code, mais plutôt à
+    trouver un schéma de compilation mécanique qui soit facile à implémenter.
+
+    (Les quatre expressions ci-dessous sont indépendantes.)
+
+    ~1 - (3 * 4)~
+
+    ~x >= 0~
+
+    ~if x = 0 then 0 else y / x~
+
+    ~(while (x[0] >= 0) (x[0] := x[0] - 1)); x[0]~
+**** Solutions
+     Toute instruction Retrolix doit être précédée d'une étiquette, mais on les
+     omet ci-dessous les étiquettes superflues. Tous les ~xI~ sont des variables
+     locales préalablement déclarées.
+
+     Premier exemple :
+
+#+BEGIN_SRC
+       x1 <- copy 1;
+       x2 <- copy 3;
+       x3 <- copy 4;
+       x4 <- mul x2, x3;
+       r  <- add x1, x4;
+#+END_SRC
+
+     Deuxième exemple :
+
+#+BEGIN_SRC
+           x1 <- copy 1;
+           x2 <- copy x;
+           x3 <- eq x1, x2;
+           jumpif eq x3, 0 -> lE, lT
+       lT: r <- copy 0;
+           jmp lK:
+       lE: x4 <- y;
+           x5 <- x;
+           r <- div x4, x5;
+       lK:
+#+END_SRC
+
+     Troisième exemple :
+
+#+BEGIN_SRC
+       lT: x1 <- read_block(x, 0);
+           x2 <- copy 0;
+           x3 <- gte x1, x2;
+           jumpif eq x3, 0 -> lK, lB
+       lB: x4 <- read_block(x, 0);
+           x5 <- sub x4, 1;
+           write_block(x, 0, x5);
+           jump lT
+       lK: r <- read_block(x, 0);
+#+END_SRC
+
+     *Remarque* : ces solutions sont volontairement naïves. Un attrait des
+     compilateurs optimisants est de permettre, au moins dans une certaine
+     mesure, de séparer la correction de l'efficicacité. Concrètement, on peut
+     générer du code simple qui sera optimisé par une passe ultérieure. En
+     particulier, le code montré ci-dessus peut être facilement généré par une
+     fonction récursive.
+*** Passage à la convention d'appel de la machine
+    Fopix dispose du mécanisme d'appel de fonction usuel des langages de
+    programmation de haut niveau. Celui-ci est indépendant de l'architecture
+    cible. À l'inverse, Retrolix respecte la convention d'appel de x86-64. Une
+    étape de la traduction est donc d'implémenter cette traduction.
+
+    Pouvez-vous rappeler la convention d'appel POSIX System-V x86-64 ?
+
+    Les six premiers arguments sont passés dans les registres %rdi, %rsi, %rdx,
+    %rcx, %r8 et %r9, les suivants sont passés par la pile de droite à gauche.
+
+    (Cette convention ne concerne que les valeurs entières et pas les flottants,
+    ces derniers ne nous concernant pas dans flap.)
+
+    Remarquons que la pile n'est pas encore explicite en Retrolix, qui dispose
+    donc d'un mécanisme de passage d'arguments dédié. C'est la passe de Retrolix
+    vers x86-64 qui explicite le passage des arguments, comme vous l'avez vu
+    lors des cours précédents.
+
+    Comment traduire les expressions suivantes ?
+
+    #+BEGIN_SRC
+    f()
+    #+END_SRC
+
+    #+BEGIN_SRC
+    f(1, 2 + 3)
+    #+END_SRC
+
+    #+BEGIN_SRC
+    x1 <- copy 1
+    x2 <- copy 2
+    x3 <- copy 3
+    x4 <- add x2, x3
+    %rdi <- copy x1
+    %rsi <- copy x4
+    call f()
+    #+END_SRC
+
+    #+BEGIN_SRC
+    12 + f(3 * 8)
+    #+END_SRC
+
+**** Solutions
+     #+BEGIN_SRC
+     call f()
+     #+END_SRC
+
+     #+BEGIN_SRC
+     f(1, 2, 3, y, 5, 6, 40 + 2)
+     #+END_SRC
+
+     #+BEGIN_SRC
+     x1 <- copy 1
+     x2 <- copy 2
+     x3 <- copy 3
+     x4 <- copy y
+     x5 <- copy 5
+     x6 <- copy 6
+     x7 <- copy 40
+     x8 <- copy 2
+     x9 <- add x7, x8
+     %rdi <- copy x1
+     %rsi <- copy x2
+     %rdx <- copy x3
+     %rcx <- copy x4
+     %r8  <- copy x5
+     %r9  <- copy x6
+     call f(x9)
+     #+END_SRC
+
+    #+BEGIN_SRC
+    x1 <- copy 12
+    x2 <- copy 3
+    x3 <- copy 8
+    x4 <- add x2, x3
+    %rdi <- copy x4
+    call f()
+    x5 <- copy %rax
+    x6 <- add x1, x5
+    #+END_SRC

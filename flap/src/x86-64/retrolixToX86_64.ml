@@ -438,8 +438,18 @@ module InstructionSelector : InstructionSelector = struct
 
   let orl ~dst ~srcl ~srcr = failwith "Students! This is your job! 9"
 
-  let conditional_jump ~cc ~srcl ~srcr ~ll ~lr =
-    failwith "Students! This is your job! 10"
+  (*val conditional_jump :
+    cc:T.condcode ->
+    srcl:T.src -> srcr:T.src -> ll:string -> lr:string -> T.line list*)
+  let conditional_jump ~(cc : T.condcode) ~(srcl : T.src) ~(srcr : T.src)
+      ~(ll : string) ~(lr : string) =
+    let instr, dst =
+      match srcr with
+      | `Imm _ as src           -> ( [ Instruction (movq ~src ~dst:scratch) ],
+                                     scratch )
+      | (`Addr _ | `Reg _) as x -> ([], x)
+    in
+    instr @ [ Instruction (Sub { s = `q; src = srcl; dst }) ]
 
   let switch ?default ~discriminant ~cases =
     failwith "Students! This is your job! 12"

@@ -183,7 +183,7 @@ let register_of_string s =
      invalid_arg ("register_of_string: " ^ s)
 
 (** Registers are numbered, RAX being 0 and R15 being 15. *)
-let register_number r =
+let register_number (r:register) =
   (* TODO: is this reasonable? *)
   assert Obj.(is_int @@ repr r);
   (Obj.magic r : int)

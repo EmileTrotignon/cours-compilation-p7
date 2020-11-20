@@ -422,13 +422,30 @@ end
 module InstructionSelector : InstructionSelector = struct
   open T
 
-  let mov ~(dst : dst) ~(src : src) = [ Instruction (Mov { s = `q; dst; src }) ]
+  let mov ~(dst : dst) ~(src : src) =
+    match (dst, src) with
+    | (`Addr _ as dst), (`Addr _ as src) ->
+        [
+          Instruction (movq ~src ~dst:scratch);
+          Instruction (movq ~src:scratch ~dst);
+        ]
+    | _ -> [ Instruction (movq ~dst ~src) ]
 
   let bin ins ~dst ~srcl ~srcr = failwith "Students! This is your job! 3"
 
-  let add ~dst ~srcl ~srcr = failwith "Students! This is your job! 4"
+  let add ~dst ~srcl ~srcr =
+    [
+      Instruction (xorq ~src:(dst :> T.src) ~dst);
+      Instruction (addq ~src:srcr ~dst);
+      Instruction (addq ~src:srcr ~dst);
+    ]
 
-  let sub ~dst ~srcl ~srcr = failwith "Students! This is your job! 5"
+  let sub ~(dst : T.dst) ~(srcl : T.src) ~(srcr : T.src) =
+    [
+      Instruction (xorq ~src:(dst :> T.src) ~dst);
+      Instruction (subq ~src:srcr ~dst);
+      Instruction (addq ~src:srcr ~dst);
+    ]
 
   let mul ~dst ~srcl ~srcr = failwith "Students! This is your job! 6"
 
@@ -444,12 +461,12 @@ module InstructionSelector : InstructionSelector = struct
   let conditional_jump ~(cc : T.condcode) ~(srcl : T.src) ~(srcr : T.src)
       ~(ll : string) ~(lr : string) =
     let instr, dst =
-      match srcr with
+      match srcl with
       | `Imm _ as src           -> ( [ Instruction (movq ~src ~dst:scratch) ],
                                      scratch )
       | (`Addr _ | `Reg _) as x -> ([], x)
     in
-    instr @ [ Instruction (Sub { s = `q; src = srcl; dst }) ]
+    instr @ [ Instruction (subq ~src:srcr ~dst) ]
 
   let switch ?default ~discriminant ~cases =
     failwith "Students! This is your job! 12"
@@ -482,12 +499,22 @@ module FrameManager (IS : InstructionSelector) : FrameManager = struct
 
   (* val location_of : frame_descriptor -> S.identifier -> T.address*)
   let location_of (fd : frame_descriptor) (id : S.identifier) : T.address =
-    {
-      offset = Some (Lab (match id with Id s -> s));
-      base = None;
-      idx = None;
-      scale = `One;
-    }
+    let addr = S.IdMap.find_opt id fd.stack_map in
+    match addr with
+    | None      ->
+        {
+          offset = Some (Lab (match id with Id s -> s));
+          base = Some RIP;
+          idx = None;
+          scale = `One;
+        }
+    | Some addr -> 
+        {
+          offset = Some (Lit addr);
+          base = Some RBP;
+          idx = None;
+          scale = `One;
+        }
 
   let function_prologue fd =
     (* Student! Implement me! *)

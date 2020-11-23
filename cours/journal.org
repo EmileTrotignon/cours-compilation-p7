@@ -1195,3 +1195,228 @@ f:     pushq %rbp
     x5 <- copy %rax
     x6 <- add x1, x5
     #+END_SRC
+* Cours 11 : De Hobix à Fopix <2020-11-23>
+  En avant pour le dernier jalon !
+** Présentation de Hobix
+   Voir [[file://../flap/src/hobix/hobixAST.ml][hobixAST.ml]].
+
+   Quelles similarités et différences distinguez-vous entre Hobix et Fopix ?
+
+   Les langages sont identiques à quelques exceptions près :
+
+   - Fopix ne dispose pas de ~read/write/allocate_block()~ ad-hoc,
+
+   - En Hobix, les fonctions sont des valeurs, et on a une construction ~apply~
+     générique (la fonction est une expression quelconque),
+
+   - Les littéraux de Fopix comprennent, en plus de ceux de Hobix, un nom de
+     fonction ~LFun f~ (qui doit être compris comme un pointeur vers ~f~).
+
+   En d'autres termes, en Hobix les fonctions sont *de première classe* (comme
+   en OCaml), tandis que Fopix ne dispose que sauts indirects (comme en C).
+
+   Pour traduire Hobix vers Fopix, il faut donc ramener les constructions de
+   bloc à des appels de fonctions génériques, mais surtout éliminer les
+   fonctions de première classe. On va suivre l'approche vue durant le cours
+   d'introduction à la sémantique, avec une passe dite d'/explicitation des
+   fermetures/ (ou /closure conversion/ en anglais).
+** L'explication des fermetures
+   Comment traduire les programmes OCaml suivants en C ? Comme d'habitude, on
+   cherche une traduction mécanique et locale (expression par expression),
+   comme le ferait un compilateur !
+
+   On choisit le format suivant pour les fermetures.
+
+   |------------------+------------------+------------------+-----|
+   | pointeur de code | variable libre 0 | variable libre 2 | ... |
+   |------------------+------------------+------------------+-----|
+   | clo[0]           | clo[1]           | clo[2]           | ... |
+   |------------------+------------------+------------------+-----|
+
+*** Fonctions anonymes
+     Les exemples ci-dessous visent à vous rappeler qu'une fonction n'est pas
+     qu'un pointeur de code.
+
+      #+BEGIN_SRC ocaml
+let f0 z =
+  let y = z * 2 in
+  fun x -> x + y + z
+      #+END_SRC
+
+      #+BEGIN_SRC ocaml
+let f1 y =
+  let g = fun x -> x + y in
+  let h = fun x -> 2 * x in
+  if y > 0 then g else h
+      #+END_SRC
+**** Solutions
+      *Remarque* : les solutions écrites en pseudo-C ci-dessous sont données
+      dans un but pédagogique. Les détails sont volontairement simplifiés par
+      rapport à ce une traduction d'OCaml vers C complète.
+
+      #+BEGIN_SRC C
+int f0_anon0(block_t *clo, int x) {
+  return x + clo->y + clo->z;
+}
+
+void f0(int z) {
+  block_t *clo = allocate_block(3);
+  int y = z * 2;
+  clo[0] = &f0_anon0;
+  clo[1] = y;
+  clo[2] = z;
+  return clo;
+}
+      #+END_SRC
+
+      #+BEGIN_SRC C
+int f1_anon0(block_t *clo, int x) {
+  return x + clo[1];
+}
+
+int f1_anon1(block_t *clo, int x) {
+  return 2 * x;
+}
+
+void f1(int y) {
+  block_t *clo = allocate_block(2);
+  if (y > 0) {
+    clo[0] = &f0_anon0;
+    clo[1] = y;
+  } else {
+    clo[0] = &f0_anon1;
+  }
+  return clo;
+}
+      #+END_SRC
+
+      *Attention* : dans le code ci-dessus, on a traité les appels aux fonctions
+      top-level de manière spéciale (on a pas fabriqué de fermeture pour elles
+      puisqu'elles sont nécessairement closes !). C'est une optimisation
+      importante mais que vous ne réaliserez sans doute pas dans le jalon.
+*** Applications
+     #+BEGIN_SRC ocaml
+let f2 x =
+  let f = f0 4 in
+  f x
+     #+END_SRC
+
+**** Solution
+     #+BEGIN_SRC C
+void f2(int x) {
+  block_t *clo = f1(4);
+  return clo[0](clo, x);
+}
+
+     #+END_SRC
+*** Schéma général de la traduction
+    À quoi ressemble la traduction précédente, si on veut générer du Fopix ?
+
+    Le pseudo-code ci-dessous exprime la fonction de compilation C(-) qui prend
+    une expression Hopix e et lui associe une expression Fopix C(e).
+
+     #+BEGIN_VERBATIM
+C(e₁ e₂) = soit c et x des identifiants frais
+           << val c = C(e₁);
+              val x = C(e₂);
+              call c[0] with (c, x) >>
+
+C(fun x₁ ... xₖ → e) = soit { y₁, ..., yₗ } = FV(fun (x₁, ..., xₖ) → e),
+                       soit "fresh_name" un nom de fonction frais,
+                       l'expression est traduite vers :
+                         << val c = allocate_block (l + 1);
+                            c[0] := &fresh_name;
+                            c[1] := y₁;
+                            c[2] := y₂;
+                            ...
+                            c[l] := yₗ;
+                            c >>
+                       et on ajoute une fonction top-level :
+                         << def fresh_name(clo, x₁, ..., xₖ) =
+                            C(e)[y₁ \ clo[1], ..., yₗ \ clo[l]] >>
+
+     #+END_VERBATIM
+
+     Il reste cependant une question en suspend : celle de la récurs
+*** La récursion
+**** Simple
+      Comment traduire l'exemple ci-dessous, par exemple ?
+#+BEGIN_SRC ocaml
+let rec repeat n f =
+  let rec aux n = if n = 0 then () else (f n; aux (n - 1)) in
+  aux n
+#+END_SRC
+***** Solution 1
+      Quand on compile le corps de ~aux~, on connaît le nom de la fonction
+      Fopix qui correspond. On peut donc spécialiser la traduction pour
+      remplacer l'appel récursif à ~aux~ par un appel direct à la fonction
+      traduite.
+***** Solution 2
+      On peut mimer l'interprète du jalon 3 et produire une fermeture cyclique.
+      On voit donc l'occurrence récursive de ~aux~ comme une variable libre.
+
+      #+BEGIN_SRC C
+void repeat_aux(block_t *clo, int n) {
+  if (n == 0)
+    ;
+  else {
+    clo[1][0](clo[1], n);
+    clo[2][0](clo[2], n - 1);
+  }
+}
+
+void repeat(int n, block_t *clo_f) {
+  block_t *clo = allocate_block(3);
+  clo[0] = &repeat_aux;
+  clo[1] = clo_f;
+  clo[2] = clo;
+  clo[0](clo, n);
+}
+      #+END_SRC
+**** Mutuelle
+      #+BEGIN_SRC ocaml
+let repeat_alt n f =
+  let rec odd k =
+    if k < 0 then () else (f true; even (k - 1))
+  and even k =
+    if k < 0 then () else (f false; odd (k - 1))
+  in
+  if n mod 2 = 0 then even n else odd n
+      #+END_SRC
+***** Solutions
+      On peut appliquer les mêmes techniques que pour la récursion simple.
+
+#+BEGIN_SRC
+void repeat_alt_odd(block_t *clo, int k) {
+  if (k >= 0) {
+    clo[1][0](clo[1], 1);
+    clo[2][0](clo[2], k - 1);
+  }
+}
+
+// repeat_alt_even est similaire
+...
+
+void repeat_alt(int n, block_t *clo_f) {
+  block_t *clo_odd = allocate_block(3);
+  block_t *clo_even = allocate_block(3);
+  clo_odd[0] = &repeat_alt_odd;
+  clo_odd[1] = clo_f;
+  clo_odd[2] = clo_even;
+  clo_even[0] = &repeat_alt_even;
+  clo_even[1] = clo_f;
+  clo_even[2] = clo_odd;
+  if (n % 2 == 0) {
+    clo_even[0](clo_even, n);
+  } else {
+    clo_odd[0](clo_odd, n);
+  }
+}
+#+END_SRC
+
+      On peut également suivre OCaml et produire une unique fermeture qui
+      partage les pointeurs de toutes les fonctions mutuellement récursives et
+      l'union des variables libres de ces fonctions.
+
+      Quel est l'avantage de cette deuxième solution ? Économiser de l'espace
+      sur l'environnement.

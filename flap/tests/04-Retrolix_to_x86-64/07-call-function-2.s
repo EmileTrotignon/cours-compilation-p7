@@ -1,5 +1,6 @@
 .data
-x:
+.S_0:
+	.string "%d %d\n"
 	/* x */
 	.quad 0
 .text
@@ -11,15 +12,20 @@ main:
 	call .I_154575915
 	movq $0, %rdi
 	call exit
+	.extern printf
 .p2align 3, 144
-double_int:
-	/* Retrolix function double_int. */
+print_two_int:
+	/* Retrolix function print_two_int. */
 	pushq %rbp
 	movq %rsp, %rbp
 	addq $0, %rsp
-	xorq %rax, %rax
-	addq %rdi, %rax
-	addq %rdi, %rax
+	movq %rdi, %rax
+	movq %rsi, %rbx
+	movq $.S_0, %rdi
+	movq %rax, %rsi
+	movq %rbx, %rdx
+	movq $0, %rax
+	call printf
 	addq $0, %rsp
 	popq %rbp
 	ret
@@ -29,23 +35,8 @@ double_int:
 	pushq %rbp
 	movq %rsp, %rbp
 	addq $0, %rsp
-	movq $1, x(%rip)
-	movq $4, %rbx
-l02:
-	movq %rbx, %r15
-	cmpq $1, %r15
-	jge l03
-	jmp l08
-l03:
-	movq x(%rip), %rdi
-	xorq %rbx, %rbx
-	subq $1, %rbx
-	addq %rbx, %rbx
-	call double_int
-	movq %rax, x(%rip)
-	jmp l02
-l08:
-	movq x(%rip), %rdi
-	call observe_int
+	movq $37, %rdi
+	movq $73, %rsi
+	call print_two_int
 	movq $0, %rdi
 	call exit

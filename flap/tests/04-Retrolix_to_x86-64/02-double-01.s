@@ -32,19 +32,14 @@ double_int:
 	movq $1, x(%rip)
 	movq $4, %rbx
 l02:
-	movq %rbx, %r15
-	cmpq $1, %r15
-	jge l03
-	jmp l08
-l03:
+	subq $1, %rbx
 	movq x(%rip), %rdi
 	xorq %rbx, %rbx
 	subq $1, %rbx
-	addq %rbx, %rbx
+	addq $1, %rbx
 	call double_int
 	movq %rax, x(%rip)
 	jmp l02
-l08:
 	movq x(%rip), %rdi
 	call observe_int
 	movq $0, %rdi

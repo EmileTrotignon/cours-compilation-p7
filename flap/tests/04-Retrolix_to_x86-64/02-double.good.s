@@ -16,36 +16,27 @@ double_int:
 	/* Retrolix function double_int. */
 	pushq %rbp
 	movq %rsp, %rbp
-	addq $0, %rsp
 	xorq %rax, %rax
 	addq %rdi, %rax
 	addq %rdi, %rax
-	addq $0, %rsp
-	popq %rbp
 	ret
 .p2align 3, 144
 .I_154575915:
 	/* Initializer for x. */
 	pushq %rbp
 	movq %rsp, %rbp
-	addq $0, %rsp
-	movq $1, x(%rip)
+	movq $1, x(%rbp)
 	movq $4, %rbx
 l02:
-	movq %rbx, %r15
-	cmpq $1, %r15
-	jge l03
-	jmp l08
-l03:
-	movq x(%rip), %rdi
+	subq $1, %rbx
+	movq x(%rbp), %rdi
 	xorq %rbx, %rbx
 	subq $1, %rbx
-	addq %rbx, %rbx
+	addq $1, %rbx
 	call double_int
-	movq %rax, x(%rip)
+	movq %rax, x(%rbp)
 	jmp l02
-l08:
-	movq x(%rip), %rdi
+	movq x(%rbp), %rdi
 	call observe_int
 	movq $0, %rdi
 	call exit

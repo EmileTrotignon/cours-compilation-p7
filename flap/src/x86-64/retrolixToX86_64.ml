@@ -435,38 +435,51 @@ module InstructionSelector : InstructionSelector = struct
 
   let add ~dst ~srcl ~srcr =
     [
-      Instruction (xorq ~src:(dst :> T.src) ~dst);
-      Instruction (addq ~src:srcr ~dst);
-      Instruction (addq ~src:srcr ~dst);
+      Instruction (zeroq scratch);
+      Instruction (addq ~src:srcr ~dst:scratch);
+      Instruction (addq ~src:srcl ~dst:scratch);
+      Instruction (movq ~src:scratch ~dst);
     ]
 
   let sub ~(dst : T.dst) ~(srcl : T.src) ~(srcr : T.src) =
     [
-      Instruction (xorq ~src:(dst :> T.src) ~dst);
-      Instruction (subq ~src:srcr ~dst);
-      Instruction (addq ~src:srcr ~dst);
+      Instruction (zeroq scratch);
+      Instruction (subq ~src:srcr ~dst:scratch);
+      Instruction (addq ~src:srcl ~dst:scratch);
+      Instruction (movq ~src:scratch ~dst);
     ]
 
-  let mul ~dst ~srcl ~srcr = failwith "Students! This is your job! 6"
+  let mul ~dst ~srcl ~srcr =
+    [
+      Instruction (zeroq scratch);
+      Instruction (incq ~dst:scratch);
+      Instruction (imulq ~src:srcl ~dst:scratch);
+      Instruction (imulq ~src:srcr ~dst:scratch);
+      Instruction (movq ~src:scratch ~dst);
+    ]
 
   let div ~dst ~srcl ~srcr = failwith "Students! This is your job! 7"
 
   let andl ~dst ~srcl ~srcr = failwith "Students! This is your job! 8"
 
-  let orl ~dst ~srcl ~srcr = failwith "Students! This is your job! 9"
+  let orl ~dst ~srcl ~srcr =
+    [
+      Instruction (xorq ~src:(dst :> T.src) ~dst);
+      Instruction (orq ~src:srcl ~dst);
+      Instruction (orq ~src:srcr ~dst);
+    ]
 
   (*val conditional_jump :
     cc:T.condcode ->
     srcl:T.src -> srcr:T.src -> ll:string -> lr:string -> T.line list*)
   let conditional_jump ~(cc : T.condcode) ~(srcl : T.src) ~(srcr : T.src)
       ~(ll : string) ~(lr : string) =
-    let instr, dst =
-      match srcl with
-      | `Imm _ as src           -> ( [ Instruction (movq ~src ~dst:scratch) ],
-                                     scratch )
-      | (`Addr _ | `Reg _) as x -> ([], x)
-    in
-    instr @ [ Instruction (subq ~src:srcr ~dst) ]
+    [
+      Instruction (movq ~src:srcl ~dst:scratch);
+      Instruction (cmpq ~src1:srcr ~src2:scratch);
+      Instruction (jcc ~cc ~tgt:(Lab ll));
+      Instruction (jmpd ~tgt:(Lab lr));
+    ]
 
   let switch ?default ~discriminant ~cases =
     failwith "Students! This is your job! 12"
@@ -493,9 +506,20 @@ module FrameManager (IS : InstructionSelector) : FrameManager = struct
     + ((if empty_frame fd then 0 else 1) * Mint.size_in_bytes)
     + fd.locals_space
 
-  let frame_descriptor ~params ~locals =
+  (*val frame_descriptor :
+    params:S.identifier list -> locals:S.identifier list -> frame_descriptor*)
+  let frame_descriptor ~(params : S.identifier list)
+      ~(locals : S.identifier list) : frame_descriptor =
     (* Student! Implement me! *)
-    { param_count = 0; locals_space = 0; stack_map = S.IdMap.empty }
+    {
+      param_count = List.length params;
+      locals_space = 8 * List.length locals;
+      stack_map =
+        S.IdMap.add_seq
+          (List.to_seq
+             (List.mapi (fun i id -> (id, Int64.of_int (i * 8))) locals))
+          S.IdMap.empty;
+    }
 
   (* val location_of : frame_descriptor -> S.identifier -> T.address*)
   let location_of (fd : frame_descriptor) (id : S.identifier) : T.address =
@@ -508,48 +532,35 @@ module FrameManager (IS : InstructionSelector) : FrameManager = struct
           idx = None;
           scale = `One;
         }
-    | Some addr -> 
-        {
-          offset = Some (Lit addr);
-          base = Some RBP;
-          idx = None;
-          scale = `One;
-        }
+    | Some addr ->
+        { offset = Some (Lit addr); base = Some RBP; idx = None; scale = `One }
 
-  let function_prologue fd =
+  let function_prologue (fd : frame_descriptor) =
     (* Student! Implement me! *)
-    [
-      T.Instruction (Push { s = `q; src = `Reg RBP });
-      Instruction (Mov { s = `q; dst = `Reg RBP; src = `Reg RSP });
-    ]
+    T.
+      [
+        Instruction (pushq ~src:rbp);
+        Instruction (movq ~src:rsp ~dst:rbp);
+        Instruction
+          (subq ~src:(`Imm (Lit (Mint.of_int fd.locals_space))) ~dst:rsp);
+      ]
 
   let function_epilogue fd =
     (* Student! Implement me! *)
-    []
+    T.
+      [
+        Instruction
+          (addq ~src:(`Imm (Lit (Mint.of_int fd.locals_space))) ~dst:rsp);
+        Instruction (popq ~dst:rbp);
+      ]
 
   (*val call :
     frame_descriptor ->
     kind:[ `Normal | `Tail ] -> f:T.src -> args:T.src list -> T.line list*)
   let call (fd : frame_descriptor) ~(kind : [< `Normal | `Tail ]) ~(f : T.src)
       ~(args : T.src list) =
-    List.mapi
-      (fun i arg ->
-        T.Instruction
-          ( match i with
-          | 0 -> Mov { s = `q; src = arg; dst = `Reg RDI }
-          | 1 -> Mov { s = `q; src = arg; dst = `Reg RSI }
-          | 2 -> Mov { s = `q; src = arg; dst = `Reg RDX }
-          | 3 -> Mov { s = `q; src = arg; dst = `Reg RCX }
-          | 4 -> Mov { s = `q; src = arg; dst = `Reg R8 }
-          | 5 -> Mov { s = `q; src = arg; dst = `Reg R9 }
-          | _ -> failwith "AHHHHH" ))
-      args
-    @ [
-        T.Instruction
-          ( match f with
-          | (`Addr _ | `Reg _) as tgt -> T.CallI { tgt }
-          | `Imm tgt                  -> T.CallD { tgt } );
-      ]
+    List.map (fun arg -> T.Instruction (T.pushq ~src:arg)) args
+    @ [ T.Instruction (T.calldi ~tgt:f) ]
 end
 
 module CG = Codegen (InstructionSelector) (FrameManager (InstructionSelector))

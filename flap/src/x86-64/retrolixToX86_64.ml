@@ -517,8 +517,11 @@ module FrameManager (IS : InstructionSelector) : FrameManager = struct
       stack_map =
         S.IdMap.add_seq
           (List.to_seq
-             (List.mapi (fun i id -> (id, Int64.of_int (i * 8))) locals))
-          S.IdMap.empty;
+             (List.mapi (fun i id -> (id, Int64.of_int ((i + 2) * -8))) params))
+          (S.IdMap.add_seq
+             (List.to_seq
+                (List.mapi (fun i id -> (id, Int64.of_int (i * 8))) locals))
+             S.IdMap.empty);
     }
 
   (* val location_of : frame_descriptor -> S.identifier -> T.address*)
@@ -533,7 +536,12 @@ module FrameManager (IS : InstructionSelector) : FrameManager = struct
           scale = `One;
         }
     | Some addr ->
-        { offset = Some (Lit (Int64.neg addr)); base = Some RBP; idx = None; scale = `One }
+        {
+          offset = Some (Lit (Int64.neg addr));
+          base = Some RBP;
+          idx = None;
+          scale = `One;
+        }
 
   let function_prologue (fd : frame_descriptor) =
     (* Student! Implement me! *)
@@ -559,8 +567,9 @@ module FrameManager (IS : InstructionSelector) : FrameManager = struct
     kind:[ `Normal | `Tail ] -> f:T.src -> args:T.src list -> T.line list*)
   let call (fd : frame_descriptor) ~(kind : [< `Normal | `Tail ]) ~(f : T.src)
       ~(args : T.src list) =
-    List.map (fun arg -> T.Instruction (T.pushq ~src:arg)) args
+    List.map (fun arg -> T.Instruction (T.pushq ~src:arg)) (List.rev args)
     @ [ T.Instruction (T.calldi ~tgt:f) ]
+    @ List.map (fun _ -> T.Instruction (T.popq ~dst:scratch)) args
 end
 
 module CG = Codegen (InstructionSelector) (FrameManager (InstructionSelector))

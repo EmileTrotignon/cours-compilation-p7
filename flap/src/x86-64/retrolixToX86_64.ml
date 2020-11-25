@@ -533,7 +533,7 @@ module FrameManager (IS : InstructionSelector) : FrameManager = struct
           scale = `One;
         }
     | Some addr ->
-        { offset = Some (Lit addr); base = Some RBP; idx = None; scale = `One }
+        { offset = Some (Lit (Int64.neg addr)); base = Some RBP; idx = None; scale = `One }
 
   let function_prologue (fd : frame_descriptor) =
     (* Student! Implement me! *)

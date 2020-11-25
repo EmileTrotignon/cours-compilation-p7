@@ -18,7 +18,7 @@ print_two_int:
 	/* Retrolix function print_two_int. */
 	pushq %rbp
 	movq %rsp, %rbp
-	addq $16, %rsp
+	subq $16, %rsp
 	movq %rdi, 0(%rbp)
 	movq %rsi, 8(%rbp)
 	movq $.S_0, %rdi
@@ -26,7 +26,7 @@ print_two_int:
 	movq 8(%rbp), %rdx
 	movq $0, %rax
 	call printf
-	addq $-16, %rsp
+	addq $16, %rsp
 	popq %rbp
 	ret
 .p2align 3, 144
@@ -34,7 +34,7 @@ print_two_int:
 	/* Initializer for x. */
 	pushq %rbp
 	movq %rsp, %rbp
-	addq $0, %rsp
+	subq $0, %rsp
 	movq $37, %rdi
 	movq $73, %rsi
 	call print_two_int

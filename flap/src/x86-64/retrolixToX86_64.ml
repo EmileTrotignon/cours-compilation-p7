@@ -10,6 +10,14 @@
 
 (* TODO tail recursion *)
 
+let string_of_src : X86_64_AST.src -> string =
+  X86_64_PrettyPrinter.to_string X86_64_PrettyPrinter.operand
+
+let string_of_dst : X86_64_AST.dst -> string =
+  X86_64_PrettyPrinter.to_string X86_64_PrettyPrinter.operand
+
+let string_of_cc = X86_64_PrettyPrinter.to_string X86_64_PrettyPrinter.condcode
+
 let error ?(pos = Position.dummy) msg = Error.error "compilation" pos msg
 
 module Source = Retrolix
@@ -423,50 +431,76 @@ module InstructionSelector : InstructionSelector = struct
   open T
 
   let mov ~(dst : dst) ~(src : src) =
-    match (dst, src) with
+    Instruction
+      (Comment
+         (Printf.sprintf "mov ~dst:%S ~src:%S" (string_of_dst dst)
+            (string_of_src src)))
+    ::
+    ( match (dst, src) with
     | (`Addr _ as dst), (`Addr _ as src) ->
         [
           Instruction (movq ~src ~dst:scratch);
           Instruction (movq ~src:scratch ~dst);
         ]
-    | _ -> [ Instruction (movq ~dst ~src) ]
+    | _ -> [ Instruction (movq ~dst ~src) ] )
+    @ [ Instruction (Comment "end mov") ]
 
   let bin ins ~dst ~srcl ~srcr = failwith "Students! This is your job! 3"
 
   let add ~dst ~srcl ~srcr =
     [
+      Instruction
+        (Comment
+           (Printf.sprintf "add ~dst:%S ~srcl:%S ~srcr:%S" (string_of_dst dst)
+              (string_of_src srcl) (string_of_src srcr)));
       Instruction (zeroq scratch);
       Instruction (addq ~src:srcr ~dst:scratch);
       Instruction (addq ~src:srcl ~dst:scratch);
       Instruction (movq ~src:scratch ~dst);
+      Instruction (Comment "end add");
     ]
 
   let sub ~(dst : T.dst) ~(srcl : T.src) ~(srcr : T.src) =
     [
+      Instruction
+        (Comment
+           (Printf.sprintf "sub ~dst:%S ~srcl:%S ~srcr:%S" (string_of_dst dst)
+              (string_of_src srcl) (string_of_src srcr)));
       Instruction (zeroq scratch);
       Instruction (subq ~src:srcr ~dst:scratch);
       Instruction (addq ~src:srcl ~dst:scratch);
       Instruction (movq ~src:scratch ~dst);
+      Instruction (Comment "end sub");
     ]
 
   let mul ~dst ~srcl ~srcr =
     [
+      Instruction
+        (Comment
+           (Printf.sprintf "mul ~dst:%S ~srcl:%S ~srcr:%S" (string_of_dst dst)
+              (string_of_src srcl) (string_of_src srcr)));
       Instruction (zeroq scratch);
       Instruction (incq ~dst:scratch);
       Instruction (imulq ~src:srcl ~dst:scratch);
       Instruction (imulq ~src:srcr ~dst:scratch);
       Instruction (movq ~src:scratch ~dst);
+      Instruction (Comment "end mul");
     ]
 
   let div ~dst ~srcl ~srcr = failwith "Students! This is your job! 7"
 
   let andl ~dst ~srcl ~srcr = failwith "Students! This is your job! 8"
 
-  let orl ~dst ~srcl ~srcr =
+  let orl ~(dst : dst) ~(srcl : src) ~(srcr : src) =
     [
+      Instruction
+        (Comment
+           (Printf.sprintf "orl ~dst:%S ~srcl:%S ~srcr:%S" (string_of_dst dst)
+              (string_of_src srcl) (string_of_src srcr)));
       Instruction (xorq ~src:(dst :> T.src) ~dst);
       Instruction (orq ~src:srcl ~dst);
       Instruction (orq ~src:srcr ~dst);
+      Instruction (Comment "end orl");
     ]
 
   (*val conditional_jump :
@@ -475,14 +509,37 @@ module InstructionSelector : InstructionSelector = struct
   let conditional_jump ~(cc : T.condcode) ~(srcl : T.src) ~(srcr : T.src)
       ~(ll : string) ~(lr : string) =
     [
+      Instruction
+        (Comment
+           (Printf.sprintf
+              "conditional_jump ~cc:%S ~srcl:%S ~srcr:%S ~ll:%S ~lr:%S"
+              (string_of_cc cc) (string_of_src srcl) (string_of_src srcr) ll lr));
       Instruction (movq ~src:srcl ~dst:scratch);
       Instruction (cmpq ~src1:srcr ~src2:scratch);
       Instruction (jcc ~cc ~tgt:(Lab ll));
       Instruction (jmpd ~tgt:(Lab lr));
+      Instruction (Comment "end conditional_jump");
     ]
 
-  let switch ?default ~discriminant ~cases =
-    failwith "Students! This is your job! 12"
+  (*val switch :
+    ?default:string ->
+    discriminant:T.src -> cases:string array -> T.line list*)
+  let switch ?(default : string option) ~(discriminant : src)
+      ~(cases : string array) =
+    List.concat
+      (Array.to_list
+         (Array.mapi
+            (fun i case ->
+              [
+                Instruction
+                  (cmpq ~src2:discriminant ~src1:(`Imm (Lit (Mint.of_int i))));
+                Instruction (jccl ~cc:E ~tgt:case);
+              ])
+            cases))
+    @
+    match default with
+    | None         -> []
+    | Some default -> [ Instruction (jmpl ~tgt:default) ]
 end
 
 module FrameManager (IS : InstructionSelector) : FrameManager = struct
@@ -520,7 +577,9 @@ module FrameManager (IS : InstructionSelector) : FrameManager = struct
              (List.mapi (fun i id -> (id, Int64.of_int ((i + 2) * -8))) params))
           (S.IdMap.add_seq
              (List.to_seq
-                (List.mapi (fun i id -> (id, Int64.of_int (i * 8))) locals))
+                (List.mapi
+                   (fun i id -> (id, Int64.of_int ((i + 1) * 8)))
+                   locals))
              S.IdMap.empty);
     }
 
@@ -547,19 +606,23 @@ module FrameManager (IS : InstructionSelector) : FrameManager = struct
     (* Student! Implement me! *)
     T.
       [
+        Instruction (Comment "start prolog");
         Instruction (pushq ~src:rbp);
         Instruction (movq ~src:rsp ~dst:rbp);
         Instruction
           (subq ~src:(`Imm (Lit (Mint.of_int fd.locals_space))) ~dst:rsp);
+        Instruction (Comment "end prolog");
       ]
 
   let function_epilogue fd =
     (* Student! Implement me! *)
     T.
       [
+        Instruction (Comment "start epilog");
         Instruction
           (addq ~src:(`Imm (Lit (Mint.of_int fd.locals_space))) ~dst:rsp);
         Instruction (popq ~dst:rbp);
+        Instruction (Comment "end epilog");
       ]
 
   (*val call :
@@ -567,9 +630,52 @@ module FrameManager (IS : InstructionSelector) : FrameManager = struct
     kind:[ `Normal | `Tail ] -> f:T.src -> args:T.src list -> T.line list*)
   let call (fd : frame_descriptor) ~(kind : [< `Normal | `Tail ]) ~(f : T.src)
       ~(args : T.src list) =
-    List.map (fun arg -> T.Instruction (T.pushq ~src:arg)) (List.rev args)
-    @ [ T.Instruction (T.calldi ~tgt:f) ]
-    @ List.map (fun _ -> T.Instruction (T.popq ~dst:scratch)) args
+    T.(
+      Instruction
+        (Comment
+           (Printf.sprintf "call ~kind:%S ~f:%S ~args:%S"
+              (match kind with `Normal -> "`Normal" | `Tail -> "`Tail")
+              (string_of_src f)
+              (String.concat ", " (List.map string_of_src args))))
+      ::
+      ( match kind with
+      | `Normal ->
+          let alignement = (fd.locals_space + (fd.param_count * 8)) mod 16 in
+          List.map (fun arg -> Instruction (pushq ~src:arg)) (List.rev args)
+          @ [
+              Instruction
+                (subq ~src:(`Imm (Lit (Mint.of_int alignement))) ~dst:rsp);
+              Instruction (calldi ~tgt:f);
+              Instruction
+                (addq ~src:(`Imm (Lit (Mint.of_int alignement))) ~dst:rsp);
+            ]
+          @ List.map (fun _ -> Instruction (popq ~dst:scratch)) args
+          @ [ Instruction (Comment "end call") ]
+      | `Tail   ->
+          let alignement = fd.param_count * 8 mod 16 in
+
+          function_epilogue fd
+          @ List.map (fun arg -> Instruction (pushq ~src:arg)) (List.rev args)
+          @ List.filter_map Fun.id
+              [
+                ( if alignement <> 0 then
+                  Some
+                    (Instruction
+                       (subq
+                          ~src:(`Imm (Lit (Mint.of_int alignement)))
+                          ~dst:rsp))
+                else None );
+                Some (Instruction (jmpdi ~tgt:f));
+                ( if alignement <> 0 then
+                  Some
+                    (Instruction
+                       (addq
+                          ~src:(`Imm (Lit (Mint.of_int alignement)))
+                          ~dst:rsp))
+                else None );
+              ]
+          @ List.map (fun _ -> Instruction (popq ~dst:scratch)) args
+          @ [ Instruction Ret; Instruction (Comment "end call") ] ))
 end
 
 module CG = Codegen (InstructionSelector) (FrameManager (InstructionSelector))

@@ -10,6 +10,8 @@
 
 (* TODO tail recursion *)
 
+let list_option_get = List.filter_map Fun.id
+
 let string_of_src : X86_64_AST.src -> string =
   X86_64_PrettyPrinter.to_string X86_64_PrettyPrinter.operand
 
@@ -604,26 +606,34 @@ module FrameManager (IS : InstructionSelector) : FrameManager = struct
 
   let function_prologue (fd : frame_descriptor) =
     (* Student! Implement me! *)
-    T.
-      [
-        Instruction (Comment "start prolog");
-        Instruction (pushq ~src:rbp);
-        Instruction (movq ~src:rsp ~dst:rbp);
-        Instruction
-          (subq ~src:(`Imm (Lit (Mint.of_int fd.locals_space))) ~dst:rsp);
-        Instruction (Comment "end prolog");
-      ]
+    list_option_get
+      T.
+        [
+          Some (Instruction (Comment "start prolog"));
+          Some (Instruction (pushq ~src:rbp));
+          Some (Instruction (movq ~src:rsp ~dst:rbp));
+          ( if fd.locals_space <> 0 then
+            Some
+              (Instruction
+                 (subq ~src:(`Imm (Lit (Mint.of_int fd.locals_space))) ~dst:rsp))
+          else None );
+          Some (Instruction (Comment "end prolog"));
+        ]
 
   let function_epilogue fd =
     (* Student! Implement me! *)
-    T.
-      [
-        Instruction (Comment "start epilog");
-        Instruction
-          (addq ~src:(`Imm (Lit (Mint.of_int fd.locals_space))) ~dst:rsp);
-        Instruction (popq ~dst:rbp);
-        Instruction (Comment "end epilog");
-      ]
+    list_option_get
+      T.
+        [
+          Some (Instruction (Comment "start epilog"));
+          ( if fd.locals_space <> 0 then
+            Some
+              (Instruction
+                 (addq ~src:(`Imm (Lit (Mint.of_int fd.locals_space))) ~dst:rsp))
+          else None );
+          Some (Instruction (popq ~dst:rbp));
+          Some (Instruction (Comment "end epilog"));
+        ]
 
   (*val call :
     frame_descriptor ->
@@ -641,30 +651,38 @@ module FrameManager (IS : InstructionSelector) : FrameManager = struct
       ( match kind with
       | `Normal ->
           let alignement = (fd.locals_space + (fd.param_count * 8)) mod 16 in
-          List.map (fun arg -> Instruction (pushq ~src:arg)) (List.rev args)
-          @ [
+          ( if alignement <> 0 then
+            [
               Instruction
                 (subq ~src:(`Imm (Lit (Mint.of_int alignement))) ~dst:rsp);
-              Instruction (calldi ~tgt:f);
-              Instruction
-                (addq ~src:(`Imm (Lit (Mint.of_int alignement))) ~dst:rsp);
             ]
+          else [] )
+          @ List.map (fun arg -> Instruction (pushq ~src:arg)) (List.rev args)
+          @ list_option_get
+              [
+                Some (Instruction (calldi ~tgt:f));
+                ( if alignement <> 0 then
+                  Some
+                    (Instruction
+                       (addq
+                          ~src:(`Imm (Lit (Mint.of_int alignement)))
+                          ~dst:rsp))
+                else None );
+              ]
           @ List.map (fun _ -> Instruction (popq ~dst:scratch)) args
           @ [ Instruction (Comment "end call") ]
       | `Tail   ->
           let alignement = fd.param_count * 8 mod 16 in
-
           function_epilogue fd
-          @ List.map (fun arg -> Instruction (pushq ~src:arg)) (List.rev args)
-          @ List.filter_map Fun.id
+          @ ( if alignement <> 0 then
               [
-                ( if alignement <> 0 then
-                  Some
-                    (Instruction
-                       (subq
-                          ~src:(`Imm (Lit (Mint.of_int alignement)))
-                          ~dst:rsp))
-                else None );
+                Instruction
+                  (subq ~src:(`Imm (Lit (Mint.of_int alignement))) ~dst:rsp);
+              ]
+            else [] )
+          @ List.map (fun arg -> Instruction (pushq ~src:arg)) (List.rev args)
+          @ list_option_get
+              [
                 Some (Instruction (jmpdi ~tgt:f));
                 ( if alignement <> 0 then
                   Some

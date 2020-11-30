@@ -529,19 +529,19 @@ module InstructionSelector : InstructionSelector = struct
   let switch ?(default : string option) ~(discriminant : src)
       ~(cases : string array) =
     List.concat
-      (Array.to_list
-         (Array.mapi
-            (fun i case ->
-              [
-                Instruction
-                  (cmpq ~src2:discriminant ~src1:(`Imm (Lit (Mint.of_int i))));
-                Instruction (jccl ~cc:E ~tgt:case);
-              ])
-            cases))
-    @
-    match default with
-    | None         -> []
-    | Some default -> [ Instruction (jmpl ~tgt:default) ]
+      ( Array.to_list
+          (Array.mapi
+             (fun i case ->
+               [
+                 Instruction
+                   (cmpq ~src2:discriminant ~src1:(`Imm (Lit (Mint.of_int i))));
+                 Instruction (jccl ~cc:E ~tgt:case);
+               ])
+             cases)
+      @
+      match default with
+      | None         -> []
+      | Some default -> [ [ Instruction (jmpl ~tgt:default) ] ] )
 end
 
 module FrameManager (IS : InstructionSelector) : FrameManager = struct
@@ -651,49 +651,47 @@ module FrameManager (IS : InstructionSelector) : FrameManager = struct
       ( match kind with
       | `Normal ->
           let alignement = (fd.locals_space + (fd.param_count * 8)) mod 16 in
-          ( if alignement <> 0 then
+          List.concat
             [
-              Instruction
-                (subq ~src:(`Imm (Lit (Mint.of_int alignement))) ~dst:rsp);
+              ( if alignement <> 0 then
+                [
+                  Instruction
+                    (subq ~src:(`Imm (Lit (Mint.of_int alignement))) ~dst:rsp);
+                ]
+              else [] );
+              List.map (fun arg -> Instruction (pushq ~src:arg)) (List.rev args);
+              [ Instruction (calldi ~tgt:f) ];
+              ( if alignement <> 0 then
+                [
+                  Instruction
+                    (addq ~src:(`Imm (Lit (Mint.of_int alignement))) ~dst:rsp);
+                ]
+              else [] );
+              List.map (fun _ -> Instruction (popq ~dst:scratch)) args;
+              [ Instruction (Comment "end call") ];
             ]
-          else [] )
-          @ List.map (fun arg -> Instruction (pushq ~src:arg)) (List.rev args)
-          @ list_option_get
-              [
-                Some (Instruction (calldi ~tgt:f));
-                ( if alignement <> 0 then
-                  Some
-                    (Instruction
-                       (addq
-                          ~src:(`Imm (Lit (Mint.of_int alignement)))
-                          ~dst:rsp))
-                else None );
-              ]
-          @ List.map (fun _ -> Instruction (popq ~dst:scratch)) args
-          @ [ Instruction (Comment "end call") ]
       | `Tail   ->
           let alignement = fd.param_count * 8 mod 16 in
-          function_epilogue fd
-          @ ( if alignement <> 0 then
-              [
-                Instruction
-                  (subq ~src:(`Imm (Lit (Mint.of_int alignement))) ~dst:rsp);
-              ]
-            else [] )
-          @ List.map (fun arg -> Instruction (pushq ~src:arg)) (List.rev args)
-          @ list_option_get
-              [
-                Some (Instruction (jmpdi ~tgt:f));
-                ( if alignement <> 0 then
-                  Some
-                    (Instruction
-                       (addq
-                          ~src:(`Imm (Lit (Mint.of_int alignement)))
-                          ~dst:rsp))
-                else None );
-              ]
-          @ List.map (fun _ -> Instruction (popq ~dst:scratch)) args
-          @ [ Instruction Ret; Instruction (Comment "end call") ] ))
+          List.concat
+            [
+              function_epilogue fd;
+              ( if alignement <> 0 then
+                [
+                  Instruction
+                    (subq ~src:(`Imm (Lit (Mint.of_int alignement))) ~dst:rsp);
+                ]
+              else [] );
+              List.map (fun arg -> Instruction (pushq ~src:arg)) (List.rev args);
+              [ Instruction (jmpdi ~tgt:f) ];
+              ( if alignement <> 0 then
+                [
+                  Instruction
+                    (addq ~src:(`Imm (Lit (Mint.of_int alignement))) ~dst:rsp);
+                ]
+              else [] );
+              List.map (fun _ -> Instruction (popq ~dst:scratch)) args;
+              [ Instruction Ret; Instruction (Comment "end call") ];
+            ] ))
 end
 
 module CG = Codegen (InstructionSelector) (FrameManager (InstructionSelector))

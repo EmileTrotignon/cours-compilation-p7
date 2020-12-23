@@ -1,0 +1,262 @@
+[32m[OK] 01-int-literal.bad[0m
+[32m[OK] 01-int-literal.good[0m
+[32m[OK] 02-arith-01.bad[0m
+[32m[OK] 02-arith-01.good[0m
+[32m[OK] 03-arith-02.bad[0m
+[32m[OK] 03-arith-02.good[0m
+[32m[OK] 04-arith-03.bad[0m
+[32m[OK] 04-arith-03.good[0m
+[32m[OK] 06-arith-04.bad[0m
+[32m[OK] 06-arith-04.good[0m
+[32m[OK] 07-arith-05.bad[0m
+[32m[OK] 07-arith-05.good[0m
+[32m[OK] 08-char-literal.bad[0m
+[32m[OK] 08-char-literal.good[0m
+[32m[OK] 09-char-string.bad[0m
+[32m[OK] 09-char-string.good[0m
+[32m[OK] 10-local-definition.bad[0m
+[32m[OK] 10-local-definition.good[0m
+[32m[OK] 11-function-definition.bad[0m
+[32m[OK] 11-function-definition.good[0m
+[32m[OK] 12-rec-function-definition.bad[0m
+[32m[OK] 12-rec-function-definition.good[0m
+[32m[OK] 13-mutually-rec-fun-definitions.bad[0m
+[32m[OK] 13-mutually-rec-fun-definitions.good[0m
+[32m[OK] 14-binary-function.bad[0m
+[32m[OK] 14-binary-function.good[0m
+[32m[OK] 14-binary-rec-function.bad[0m
+[32m[OK] 14-binary-rec-function.good[0m
+[32m[OK] 15-binary-mutually-rec-function.bad[0m
+[32m[OK] 15-binary-mutually-rec-function.good[0m
+[32m[OK] 16-polymorphic-function.bad[0m
+[32m[OK] 16-polymorphic-function.good[0m
+[32m[OK] 17-polymorphic-binary-function.bad[0m
+[32m[OK] 17-polymorphic-binary-function.good[0m
+[32m[OK] 18-polymorphic-recursive-function.bad[0m
+[32m[OK] 18-polymorphic-recursive-function.good[0m
+[32m[OK] 19-polymorphic-mutually-recursive-functions.bad[0m
+[32m[OK] 19-polymorphic-mutually-recursive-functions.good[0m
+[32m[OK] 20-polymorphic-binary-function.bad[0m
+[32m[OK] 20-polymorphic-binary-function.good[0m
+[32m[OK] 21-record-01.bad[0m
+[32m[OK] 21-record-01.good[0m
+[32m[OK] 22-polymorphic-record.bad[0m
+[32m[OK] 22-polymorphic-record.good[0m
+[32m[OK] 23-polymorphic-record-02.bad[0m
+[32m[OK] 23-polymorphic-record-02.good[0m
+[32m[OK] 24-record-proj.bad[0m
+[32m[OK] 24-record-proj.good[0m
+[32m[OK] 25-polymorphic-record-proj.bad[0m
+[32m[OK] 25-polymorphic-record-proj.good[0m
+[32m[OK] 26-function-over-polymorphic-record.bad[0m
+[32m[OK] 26-function-over-polymorphic-record.good[0m
+[32m[OK] 27-function-in-record.bad[0m
+[32m[OK] 27-function-in-record.good[0m
+[31m[KO] 28-anonymous-function.bad[0m
+--- 03-Typing/28-anonymous-function.bad.output	2020-12-19 16:17:43.780633850 +0100
++++ 03-Typing/28-anonymous-function.bad.expected	2020-10-30 16:57:16.176647341 +0100
+@@ -1,7 +1,7 @@
+-Line 1, characters 24-59: Error (typechecking)
++Line 1, characters 44-45: Error (typechecking)
+   Type error:
+ Expected:
+-  int -> string
++  int
+ Given:
+-  int -> int
++  string
+ 
+[32m[OK] 28-anonymous-function.good[0m
+[31m[KO] 29-anonymous-nary-functions.bad[0m
+--- 03-Typing/29-anonymous-nary-functions.bad.output	2020-12-19 16:17:43.820633849 +0100
++++ 03-Typing/29-anonymous-nary-functions.bad.expected	2020-10-30 16:57:16.176647341 +0100
+@@ -1,7 +1,7 @@
+-Line 19, characters 6-85: Error (typechecking)
++Line 20, characters 8-44: Error (typechecking)
+   Type error:
+ Expected:
+-  int -> (int -> int)
++  int
+ Given:
+   int -> int
+ 
+[32m[OK] 29-anonymous-nary-functions.good[0m
+[31m[KO] 30-anonymous-third-order.bad[0m
+--- 03-Typing/30-anonymous-third-order.bad.output	2020-12-19 16:17:43.860633848 +0100
++++ 03-Typing/30-anonymous-third-order.bad.expected	2020-10-30 16:57:16.179980674 +0100
+@@ -1,7 +1,7 @@
+-Line 4, characters 22-49: Error (typechecking)
++Line 4, characters 36-37: Error (typechecking)
+   Type error:
+ Expected:
+-  `a -> `a
++  `b
+ Given:
+-  `a -> `b
++  `a
+ 
+[32m[OK] 30-anonymous-third-order.good[0m
+[32m[OK] 31-constructor.bad[0m
+[32m[OK] 31-constructor.good[0m
+[32m[OK] 32-constructor-with-data.bad[0m
+[32m[OK] 32-constructor-with-data.good[0m
+[32m[OK] 33-constructor-with-multiple-data.bad[0m
+[32m[OK] 33-constructor-with-multiple-data.good[0m
+[32m[OK] 34-recursive-datatype.bad[0m
+[32m[OK] 34-recursive-datatype.good[0m
+[31m[KO] 35-recursive-datatype-02.bad[0m
+--- 03-Typing/35-recursive-datatype-02.bad.output	2020-12-19 16:17:44.030633843 +0100
++++ 03-Typing/35-recursive-datatype-02.bad.expected	2020-10-30 16:57:16.183314008 +0100
+@@ -1,7 +1,7 @@
+ Line 6, characters 12-28: Error (typechecking)
+   Type error:
+ Expected:
+-  t -> (t -> (t -> t))
+-Given:
+   t
++Given:
++  t -> t
+ 
+[32m[OK] 35-recursive-datatype-02.good[0m
+[31m[KO] 36-recurse-datatype-embedding-functions.bad[0m
+--- 03-Typing/36-recurse-datatype-embedding-functions.bad.output	2020-12-19 16:17:44.060633841 +0100
++++ 03-Typing/36-recurse-datatype-embedding-functions.bad.expected	2020-10-30 16:57:16.183314008 +0100
+@@ -1,7 +1,2 @@
+ Line 4, characters 23-73: Error (typechecking)
+-  Type error:
+-Expected:
+-  int -> s
+-Given:
+-  s
+-
++  Only functions can be applied.
+[32m[OK] 36-recurse-datatype-embedding-functions.good[0m
+[31m[KO] 37-pattern-matching-01.bad[0m
+--- 03-Typing/37-pattern-matching-01.bad.output	2020-12-19 16:17:44.087300508 +0100
++++ 03-Typing/37-pattern-matching-01.bad.expected	2020-10-30 16:57:16.183314008 +0100
+@@ -1,2 +1,2 @@
+-Line 3, characters 27-37: Error (typechecking)
++Line 3, characters 27-30: Error (typechecking)
+   Unbound constructor `U'.
+[32m[OK] 37-pattern-matching-01.good[0m
+[31m[KO] 38-pattern-matching-02.bad[0m
+--- 03-Typing/38-pattern-matching-02.bad.output	2020-12-19 16:17:44.113967174 +0100
++++ 03-Typing/38-pattern-matching-02.bad.expected	2020-10-30 16:57:16.183314008 +0100
+@@ -1,7 +1,2 @@
+ Line 3, characters 27-41: Error (typechecking)
+-  Type error:
+-Expected:
+-  int
+-Given:
+-  t
+-
++  This pattern is not compatible with the matched value.
+[32m[OK] 38-pattern-matching-02.good[0m
+[31m[KO] 39-pattern-matching-03.bad[0m
+--- 03-Typing/39-pattern-matching-03.bad.output	2020-12-19 16:17:44.143967173 +0100
++++ 03-Typing/39-pattern-matching-03.bad.expected	2020-10-30 16:57:16.186647340 +0100
+@@ -1,2 +1,2 @@
+-Line 3, characters 43-51: Error (typechecking)
++Line 3, characters 43-46: Error (typechecking)
+   Unbound constructor `B'.
+[32m[OK] 39-pattern-matching-03.good[0m
+[31m[KO] 40-pattern-matching-04.bad[0m
+--- 03-Typing/40-pattern-matching-04.bad.output	2020-12-19 16:17:44.173967172 +0100
++++ 03-Typing/40-pattern-matching-04.bad.expected	2020-10-30 16:57:16.186647340 +0100
+@@ -1,4 +1,4 @@
+-Line 3, characters 43-55: Error (typechecking)
++Line 3, characters 36-56: Error (typechecking)
+   Type error:
+ Expected:
+   int
+[32m[OK] 40-pattern-matching-04.good[0m
+[32m[OK] 41-pattern-matching-05.bad[0m
+[32m[OK] 41-pattern-matching-05.good[0m
+[31m[KO] 42-pattern-matching-06.bad[0m
+--- 03-Typing/42-pattern-matching-06.bad.output	2020-12-19 16:17:44.227300503 +0100
++++ 03-Typing/42-pattern-matching-06.bad.expected	2020-10-30 16:57:16.186647340 +0100
+@@ -1,7 +1,2 @@
+-Line 3, characters 62-74: Error (typechecking)
+-  Type error:
+-Expected:
+-  option<int>
+-Given:
+-  option<string>
+-
++Line 3, characters 39-74: Error (typechecking)
++  All patterns must have the same type.
+[32m[OK] 42-pattern-matching-06.good[0m
+[31m[KO] 43-pattern-matching-07.bad[0m
+--- 03-Typing/43-pattern-matching-07.bad.output	2020-12-19 16:17:44.257300502 +0100
++++ 03-Typing/43-pattern-matching-07.bad.expected	2020-10-30 16:57:16.186647340 +0100
+@@ -1,7 +1,2 @@
+-Line 4, characters 2-30: Error (typechecking)
+-  Type error:
+-Expected:
+-  or<int, int>
+-Given:
+-  or<int, string>
+-
++Line 4, characters 2-59: Error (typechecking)
++  All patterns must have the same type.
+[32m[OK] 43-pattern-matching-07.good[0m
+[31m[KO] 44-pattern-matching-08.bad[0m
+--- 03-Typing/44-pattern-matching-08.bad.output	2020-12-19 16:17:44.287300502 +0100
++++ 03-Typing/44-pattern-matching-08.bad.expected	2020-10-30 16:57:16.189980674 +0100
+@@ -1 +1,2 @@
+-x : int
++Line 4, characters 26-27: Error (typechecking)
++  This is the second occurrence of this variable in the pattern.
+[32m[OK] 44-pattern-matching-08.good[0m
+[31m[KO] 45-pattern-matching-09.bad[0m
+--- 03-Typing/45-pattern-matching-09.bad.output	2020-12-19 16:17:44.317300501 +0100
++++ 03-Typing/45-pattern-matching-09.bad.expected	2020-10-30 16:57:16.189980674 +0100
+@@ -1,7 +1,2 @@
+ Line 3, characters 42-61: Error (typechecking)
+-  Type error:
+-Expected:
+-  int -> p<int, int>
+-Given:
+-  p<int, int>
+-
++  Only functions can be applied.
+[32m[OK] 45-pattern-matching-09.good[0m
+[31m[KO] 46-pattern-matching-10.bad[0m
+--- 03-Typing/46-pattern-matching-10.bad.output	2020-12-19 16:17:44.347300501 +0100
++++ 03-Typing/46-pattern-matching-10.bad.expected	2020-10-30 16:57:16.189980674 +0100
+@@ -1 +1,2 @@
+-x : int
++Line 4, characters 62-63: Error (typechecking)
++  This is the second occurrence of this variable in the pattern.
+[32m[OK] 46-pattern-matching-10.good[0m
+[32m[OK] 47-pattern-matching-11.bad[0m
+[32m[OK] 47-pattern-matching-11.good[0m
+[32m[OK] 48-pattern-matching-12.bad[0m
+[32m[OK] 48-pattern-matching-12.good[0m
+[31m[KO] 49-pattern-matching-13.bad[0m
+--- 03-Typing/49-pattern-matching-13.bad.output	2020-12-19 16:17:44.430633831 +0100
++++ 03-Typing/49-pattern-matching-13.bad.expected	2020-10-30 16:57:16.193314007 +0100
+@@ -1,7 +1,2 @@
+ Line 1, characters 50-64: Error (typechecking)
+-  Type error:
+-Expected:
+-  int
+-Given:
+-  string
+-
++  This pattern is not compatible with the matched value.
+[32m[OK] 49-pattern-matching-13.good[0m
+[32m[OK] 50-pattern-matching-14.bad[0m
+[32m[OK] 50-pattern-matching-14.good[0m
+[32m[OK] 51-ref.bad[0m
+[32m[OK] 51-ref.good[0m
+[32m[OK] 52-assign.good[0m
+[32m[OK] 53-read.bad[0m
+[32m[OK] 53-read.good[0m
+[32m[OK] 54-sequence.bad[0m
+[32m[OK] 54-sequence.good[0m
+[32m[OK] 55-while.bad[0m
+[32m[OK] 55-while.good[0m
+[32m[OK] 56-for.bad[0m
+[32m[OK] 56-for.good[0m
+[1m03-Typing: 96/111[0m

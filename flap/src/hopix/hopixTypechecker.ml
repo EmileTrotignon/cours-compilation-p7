@@ -346,7 +346,7 @@ let typecheck tenv ast : typing_environment =
           let t_real_arg = type_of_expression' tenv args in
           check_expected_type (Position.position args) t_expected_arg t_real_arg;
           t_result
-      | aty -> type_error pos "Only functions can be applied."
+      | _aty -> type_error pos "Only functions can be applied."
     and type_of_ref tenv ref =
       let inner_type = type_of_expression' tenv ref in
       ATyCon (TCon "mut", [ inner_type ])

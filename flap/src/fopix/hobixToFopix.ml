@@ -179,7 +179,7 @@ let free_variables =
             M.union (M.remove name (fvs a)) (fvs value)
         | RecFunctions li           ->
             let names, values = List.split li in
-            M.diff (M.unions (List.map fvs values)) (M.of_list names) )
+            M.union (M.unions (List.map fvs values)) (M.of_list names) )
     | S.ReadBlock (a, b) -> unions fvs [ a; b ]
     | S.Apply (a, b) -> unions fvs (a :: b)
     | S.WriteBlock (a, b, c) | S.IfThenElse (a, b, c) -> unions fvs [ a; b; c ]
@@ -258,8 +258,14 @@ let translate (p : S.t) env =
         let fs, defs = define_recursive_functions fdefs in
         fs @ List.map (fun (x, e) -> T.DefineValue (x, e)) defs
   and define_recursive_functions rdefs =
-    failwith "Students! This is your job! 1"
-  and expression env =
+    let s_ids, s_exprs = List.split rdefs in
+    let defs, expressions =
+      List.split
+      @@ List.map (fun (name, expr) -> expression ~self:name env expr) rdefs
+    in
+    let defs = List.flatten defs in
+    (defs, List.combine (List.map identifier s_ids) expressions)
+  and expression ?self env =
     let t_expr_of_s_id env = function
       | S.Id id as x ->
           if is_primitive id then T.Literal (T.LFun (T.FunId id))
@@ -301,7 +307,8 @@ let translate (p : S.t) env =
           | T.Literal (T.LFun id) -> T.FunCall (id, exprs')
           | _                     ->
               T.UnknownFunCall
-                (read_block expr (T.Literal (T.LInt Int64.zero)), expr::exprs') ) )
+                (read_block expr (T.Literal (T.LInt Int64.zero)), expr :: exprs')
+        ) )
     | S.IfThenElse (a, b, c)    ->
         (* print_endline "ifthenelse"; *)
         let afs, a = expression env a in
@@ -324,12 +331,16 @@ let translate (p : S.t) env =
                (T.Literal (T.LInt (Mint.of_int (get_i ())))))
             env
         in
-        let env' =
-          List.fold_left my_bind env fvs
+        let block_id = make_fresh_variable ~prefix:"block" () in
+        let env =
+          match self with
+          | Some id -> bind_var id (T.Variable block_id) env
+          | None    -> env
         in
+        let env' = List.fold_left my_bind env fvs in
         let defs, expr = expression env' e in
         let f_id = make_fresh_function_identifier ~prefix:"lambda" () in
-        let block_id = make_fresh_variable ~prefix:"block" () in
+
         ( T.DefineFunction (f_id, closure_id :: List.map identifier x, expr)
           :: defs,
           T.Define

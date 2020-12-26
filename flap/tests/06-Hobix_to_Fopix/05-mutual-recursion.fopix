@@ -1,3 +1,7 @@
+val f =
+  allocate_block (4)
+val g =
+  allocate_block (4)
 def lambda_1 (closure_1, x) =
   if (x =? 0) then
     1
@@ -7,26 +11,24 @@ def lambda_1 (closure_1, x) =
     with
     (read_block (closure_1, 3), (x - 1))
   end
-def lambda_2 (closure_7, x) =
+def lambda_2 (closure_6, x) =
   if (x =? 0) then
     0
   else
     call
-    (read_block (read_block (closure_7, 3), 0))
+    (read_block (read_block (closure_6, 3), 0))
     with
-    (read_block (closure_7, 3), (x - 1))
+    (read_block (closure_6, 3), (x - 1))
   end
 val f =
-  val block_2 = allocate_block (4) ;
-  val ignore_6 = write_block (block_2, 0, &lambda_1) ;
-  val ignore_5 = write_block (block_2, 1, &`-`) ;
-  val ignore_4 = write_block (block_2, 2, &`=?`) ;
-  val ignore_3 = write_block (block_2, 3, g) ; block_2
+  val ignore_5 = write_block (f, 0, &lambda_1) ;
+  val ignore_4 = write_block (f, 1, &`-`) ;
+  val ignore_3 = write_block (f, 2, &`=?`) ;
+  val ignore_2 = write_block (f, 3, g) ; f
 val g =
-  val block_8 = allocate_block (4) ;
-  val ignore_12 = write_block (block_8, 0, &lambda_2) ;
-  val ignore_11 = write_block (block_8, 1, &`-`) ;
-  val ignore_10 = write_block (block_8, 2, &`=?`) ;
-  val ignore_9 = write_block (block_8, 3, f) ; block_8
+  val ignore_10 = write_block (g, 0, &lambda_2) ;
+  val ignore_9 = write_block (g, 1, &`-`) ;
+  val ignore_8 = write_block (g, 2, &`=?`) ;
+  val ignore_7 = write_block (g, 3, f) ; g
 val main =
   print_int (call (read_block (f, 0)) with (f, 20))

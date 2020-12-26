@@ -1,15 +1,16 @@
+val apply =
+  allocate_block (1)
 def lambda_1 (closure_1, f, x) =
   call (read_block (f, 0)) with (f, x)
 val apply =
-  val block_2 = allocate_block (1) ;
-  val ignore_3 = write_block (block_2, 0, &lambda_1) ;
-  block_2
-def lambda_2 (closure_4, f, x, y) =
+  val ignore_2 = write_block (apply, 0, &lambda_1) ; apply
+val apply2 =
+  allocate_block (1)
+def lambda_2 (closure_3, f, x, y) =
   call (read_block (f, 0)) with (f, x, y)
 val apply2 =
-  val block_5 = allocate_block (1) ;
-  val ignore_6 = write_block (block_5, 0, &lambda_2) ;
-  block_5
+  val ignore_4 = write_block (apply2, 0, &lambda_2) ;
+  apply2
 val main =
   val __nothing__ =
     call

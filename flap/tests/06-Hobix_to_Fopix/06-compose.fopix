@@ -1,36 +1,37 @@
+val compose =
+  allocate_block (1)
 def lambda_2 (closure_1, f, g) =
-  val block_4 = allocate_block (3) ;
-  val ignore_7 = write_block (block_4, 0, &lambda_1) ;
-  val ignore_6 = write_block (block_4, 1, f) ;
-  val ignore_5 = write_block (block_4, 2, g) ; block_4
-def lambda_1 (closure_3, x) =
+  val block_3 = allocate_block (3) ;
+  val ignore_6 = write_block (block_3, 0, &lambda_1) ;
+  val ignore_5 = write_block (block_3, 1, f) ;
+  val ignore_4 = write_block (block_3, 2, g) ; block_3
+def lambda_1 (closure_2, x) =
   call
-  (read_block (read_block (closure_3, 1), 0))
+  (read_block (read_block (closure_2, 1), 0))
   with
   (
-    read_block (closure_3, 1),
+    read_block (closure_2, 1),
     call
-    (read_block (read_block (closure_3, 2), 0))
+    (read_block (read_block (closure_2, 2), 0))
     with
-    (read_block (closure_3, 2), x)
+    (read_block (closure_2, 2), x)
   )
 val compose =
-  val block_2 = allocate_block (1) ;
-  val ignore_8 = write_block (block_2, 0, &lambda_2) ;
-  block_2
-def lambda_3 (closure_9, x) =
+  val ignore_7 = write_block (compose, 0, &lambda_2) ;
+  compose
+val id =
+  allocate_block (1)
+def lambda_3 (closure_8, x) =
   x
 val id =
-  val block_10 = allocate_block (1) ;
-  val ignore_11 = write_block (block_10, 0, &lambda_3) ;
-  block_10
-def lambda_4 (closure_12, x) =
+  val ignore_9 = write_block (id, 0, &lambda_3) ; id
+val twice =
+  allocate_block (2)
+def lambda_4 (closure_10, x) =
   (2 * x)
 val twice =
-  val block_13 = allocate_block (2) ;
-  val ignore_15 = write_block (block_13, 0, &lambda_4) ;
-  val ignore_14 = write_block (block_13, 1, &`*`) ;
-  block_13
+  val ignore_12 = write_block (twice, 0, &lambda_4) ;
+  val ignore_11 = write_block (twice, 1, &`*`) ; twice
 val main =
   val __nothing__ =
     print_int

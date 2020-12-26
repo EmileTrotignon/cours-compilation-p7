@@ -263,7 +263,20 @@ let translate (p : S.t) env =
       List.split
       @@ List.map (fun (name, expr) -> expression ~self:name env expr) rdefs
     in
-    let defs = List.flatten defs in
+    let defs =
+      List.flatten
+        ( List.map
+            (fun (name, expr) ->
+              T.DefineValue
+                ( identifier name,
+                  allocate_block
+                    (T.Literal
+                       (T.LInt
+                          (Mint.of_int (List.length (free_variables expr) + 1))))
+                ))
+            rdefs
+        :: defs )
+    in
     (defs, List.combine (List.map identifier s_ids) expressions)
   and expression ?self env =
     let t_expr_of_s_id env = function
@@ -315,7 +328,7 @@ let translate (p : S.t) env =
         let bfs, b = expression env b in
         let cfs, c = expression env c in
         (afs @ bfs @ cfs, T.IfThenElse (a, b, c))
-    | S.Fun (x, e) as f         ->
+    | S.Fun (x, e) as f         -> (
         (* print_endline "fun"; *)
         let fvs = free_variables f in
         let closure_id = make_fresh_variable ~prefix:"closure" () in
@@ -331,7 +344,11 @@ let translate (p : S.t) env =
                (T.Literal (T.LInt (Mint.of_int (get_i ())))))
             env
         in
-        let block_id = make_fresh_variable ~prefix:"block" () in
+        let block_id =
+          match self with
+          | None      -> make_fresh_variable ~prefix:"block" ()
+          | Some name -> identifier name
+        in
         let env =
           match self with
           | Some id -> bind_var id (T.Variable block_id) env
@@ -340,23 +357,28 @@ let translate (p : S.t) env =
         let env' = List.fold_left my_bind env fvs in
         let defs, expr = expression env' e in
         let f_id = make_fresh_function_identifier ~prefix:"lambda" () in
-
+        let set_block =
+          seqs
+            ( write_block (T.Variable block_id) (T.Literal (T.LInt Int64.zero))
+                (T.Literal (T.LFun f_id))
+              :: List.mapi
+                   (fun i fv ->
+                     write_block (T.Variable block_id)
+                       (T.Literal (T.LInt (Mint.of_int (i + 1))))
+                       (t_expr_of_s_id env fv))
+                   fvs
+            @ [ T.Variable block_id ] )
+        in
         ( T.DefineFunction (f_id, closure_id :: List.map identifier x, expr)
           :: defs,
-          T.Define
-            ( block_id,
-              allocate_block
-                (T.Literal (T.LInt (Mint.of_int (List.length fvs + 1)))),
-              seqs
-                ( write_block (T.Variable block_id)
-                    (T.Literal (T.LInt Int64.zero)) (T.Literal (T.LFun f_id))
-                  :: List.mapi
-                       (fun i fv ->
-                         write_block (T.Variable block_id)
-                           (T.Literal (T.LInt (Mint.of_int (i + 1))))
-                           (t_expr_of_s_id env fv))
-                       fvs
-                @ [ T.Variable block_id ] ) ) )
+          match self with
+          | None   ->
+              T.Define
+                ( block_id,
+                  allocate_block
+                    (T.Literal (T.LInt (Mint.of_int (List.length fvs + 1)))),
+                  set_block )
+          | Some _ -> set_block ) )
     | S.AllocateBlock a         ->
         (* print_endline "AllocateBlock"; *)
         let afs, a = expression env a in

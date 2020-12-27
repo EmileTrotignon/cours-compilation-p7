@@ -171,7 +171,9 @@ let free_variables =
   in
   let rec fvs = function
     | S.Literal _ -> M.empty
-    | S.Variable x -> M.singleton x
+    | S.Variable x ->
+        if is_primitive (match x with S.Id x -> x) then M.empty
+        else M.singleton x
     | S.While (cond, e) -> fvs e
     | S.Define (vd, a) -> (
         match vd with
@@ -179,7 +181,7 @@ let free_variables =
             M.union (M.remove name (fvs a)) (fvs value)
         | RecFunctions li           ->
             let names, values = List.split li in
-            M.union (M.unions (List.map fvs values)) (M.of_list names) )
+            M.diff (M.unions (List.map fvs values)) (M.of_list names) )
     | S.ReadBlock (a, b) -> unions fvs [ a; b ]
     | S.Apply (a, b) -> unions fvs (a :: b)
     | S.WriteBlock (a, b, c) | S.IfThenElse (a, b, c) -> unions fvs [ a; b; c ]
@@ -191,7 +193,11 @@ let free_variables =
         let c = match c with None -> [] | Some c -> [ c ] in
         unions fvs ((a :: ExtStd.Array.present_to_list b) @ c)
   in
-  fun e -> M.elements (fvs e)
+  fun e ->
+    (* print_endline "free variables"; *)
+    let l = M.elements (fvs e) in
+    (* List.iter (function S.Id id -> print_endline id) l; *)
+    l
 
 type environment = {
   vars : (HobixAST.identifier, FopixAST.expression) Dict.t;
@@ -263,21 +269,17 @@ let translate (p : S.t) env =
       List.split
       @@ List.map (fun (name, expr) -> expression ~self:name env expr) rdefs
     in
-    let defs =
-      List.flatten
-        ( List.map
-            (fun (name, expr) ->
-              T.DefineValue
-                ( identifier name,
-                  allocate_block
-                    (T.Literal
-                       (T.LInt
-                          (Mint.of_int (List.length (free_variables expr) + 1))))
-                ))
-            rdefs
-        :: defs )
-    in
-    (defs, List.combine (List.map identifier s_ids) expressions)
+    let defs = List.flatten defs in
+    ( defs,
+      List.map
+        (fun (name, expr) ->
+          ( identifier name,
+            allocate_block
+              (T.Literal
+                 (T.LInt (Mint.of_int (List.length (free_variables expr) + 1))))
+          ))
+        rdefs
+      @ List.combine (List.map identifier s_ids) expressions )
   and expression ?self env =
     let t_expr_of_s_id env = function
       | S.Id id as x ->
@@ -309,7 +311,10 @@ let translate (p : S.t) env =
             let defs, t_value = expression env value in
             let defs', t_expr = expression env a in
             (defs @ defs', T.Define (identifier id, t_value, t_expr))
-        | _                       -> failwith "TODO 3" )
+        | RecFunctions fdefs      ->
+            let defs', t_expr = expression env a in
+            let fs, defs = define_recursive_functions fdefs in
+            (defs' @ fs, defines defs t_expr) )
     | S.Apply (a, bs)           -> (
         (* print_endline "apply"; *)
         let defs, expr = expression env a in
@@ -330,8 +335,16 @@ let translate (p : S.t) env =
         (afs @ bfs @ cfs, T.IfThenElse (a, b, c))
     | S.Fun (x, e) as f         -> (
         (* print_endline "fun"; *)
-        let fvs = free_variables f in
-        let closure_id = make_fresh_variable ~prefix:"closure" () in
+        let suff =
+          match self with None -> "" | Some (S.Id name) -> "_for_" ^ name
+        in
+        let fvs =
+          (* ( match self with
+             | None             -> ()
+             | Some (S.Id name) -> Printf.printf "free vars of : %s\n" name ); *)
+          free_variables f
+        in
+        let closure_id = make_fresh_variable ~prefix:("closure" ^ suff) () in
         let get_i =
           let i = ref 0 in
           fun () ->
@@ -346,7 +359,7 @@ let translate (p : S.t) env =
         in
         let block_id =
           match self with
-          | None      -> make_fresh_variable ~prefix:"block" ()
+          | None      -> make_fresh_variable ~prefix:("block" ^ suff) ()
           | Some name -> identifier name
         in
         let env =
@@ -356,7 +369,9 @@ let translate (p : S.t) env =
         in
         let env' = List.fold_left my_bind env fvs in
         let defs, expr = expression env' e in
-        let f_id = make_fresh_function_identifier ~prefix:"lambda" () in
+        let f_id =
+          make_fresh_function_identifier ~prefix:("lambda" ^ suff) ()
+        in
         let set_block =
           seqs
             ( write_block (T.Variable block_id) (T.Literal (T.LInt Int64.zero))

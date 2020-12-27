@@ -1,0 +1,41 @@
+def lambda_for_h_3 (closure_for_h_1, x, y, z) =
+  val f = allocate_block (3) ;
+  val g = allocate_block (3) ;
+  val f =
+    val ignore_5 = write_block (f, 0, &lambda_for_f_1) ;
+    val ignore_4 = write_block (f, 1, g) ;
+    val ignore_3 = write_block (f, 2, z) ; f
+    ;
+  val g =
+    val ignore_9 = write_block (g, 0, &lambda_for_g_2) ;
+    val ignore_8 = write_block (g, 1, f) ;
+    val ignore_7 = write_block (g, 2, y) ; g
+    ;
+  call (read_block (g, 0)) with (g, x)
+def lambda_for_f_1 (closure_for_f_2, x) =
+  if (x =? 0) then
+    read_block (closure_for_f_2, 2)
+  else
+    call
+    (read_block (read_block (closure_for_f_2, 1), 0))
+    with
+    (read_block (closure_for_f_2, 1), (x - 1))
+  end
+def lambda_for_g_2 (closure_for_g_6, x) =
+  if (x =? 0) then
+    read_block (closure_for_g_6, 2)
+  else
+    call
+    (read_block (read_block (closure_for_g_6, 1), 0))
+    with
+    (read_block (closure_for_g_6, 1), (x - 1))
+  end
+val h =
+  allocate_block (1)
+val h =
+  val ignore_10 = write_block (h, 0, &lambda_for_h_3) ; h
+val main =
+  val __nothing__ =
+    print_int (call (read_block (h, 0)) with (h, 2, 20, 42))
+    ;
+  print_int (call (read_block (h, 0)) with (h, 3, 20, 42))

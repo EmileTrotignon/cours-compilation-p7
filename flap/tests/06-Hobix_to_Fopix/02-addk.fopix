@@ -1,15 +1,16 @@
-val addk =
-  allocate_block (2)
-def lambda_2 (closure_1, k) =
-  val block_3 = allocate_block (3) ;
-  val ignore_6 = write_block (block_3, 0, &lambda_1) ;
-  val ignore_5 = write_block (block_3, 1, &`+`) ;
-  val ignore_4 = write_block (block_3, 2, k) ; block_3
+def lambda_for_addk_2 (closure_for_addk_1, k) =
+  val block_3 = allocate_block (2) ;
+  val ignore_5 = write_block (block_3, 0, &lambda_1) ;
+  val ignore_4 = write_block (block_3, 1, k) ; block_3
 def lambda_1 (closure_2, x) =
-  (x + read_block (closure_2, 2))
+  (x + read_block (closure_2, 1))
 val addk =
-  val ignore_8 = write_block (addk, 0, &lambda_2) ;
-  val ignore_7 = write_block (addk, 1, &`+`) ; addk
+  allocate_block (1)
+val addk =
+  val ignore_6 =
+    write_block (addk, 0, &lambda_for_addk_2)
+    ;
+  addk
 val f =
   call (read_block (addk, 0)) with (addk, 41)
 val main =

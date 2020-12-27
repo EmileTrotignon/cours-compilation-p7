@@ -25,9 +25,8 @@ val curry =
 def lambda_4 (closure_13, x, y) =
   (x + y)
 val add =
-  val block_14 = allocate_block (2) ;
-  val ignore_16 = write_block (block_14, 0, &lambda_4) ;
-  val ignore_15 = write_block (block_14, 1, &`+`) ;
+  val block_14 = allocate_block (1) ;
+  val ignore_15 = write_block (block_14, 0, &lambda_4) ;
   block_14
 val g =
   call (read_block (curry, 0)) with (curry, add)

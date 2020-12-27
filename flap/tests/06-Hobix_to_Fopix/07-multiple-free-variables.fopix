@@ -2,16 +2,15 @@ def lambda_2 (closure_1, z) =
   val x = (z + 1) ;
   val y = x ;
   val t = 0 ;
-  val block_4 = allocate_block (3) ;
-  val ignore_7 = write_block (block_4, 0, &lambda_1) ;
-  val ignore_6 = write_block (block_4, 1, &`+`) ;
-  val ignore_5 = write_block (block_4, 2, x) ; block_4
+  val block_4 = allocate_block (2) ;
+  val ignore_6 = write_block (block_4, 0, &lambda_1) ;
+  val ignore_5 = write_block (block_4, 1, x) ; block_4
 def lambda_1 (closure_3, k) =
-  (k + read_block (closure_3, 2))
+  (k + read_block (closure_3, 1))
 val f =
-  val block_2 = allocate_block (2) ;
-  val ignore_9 = write_block (block_2, 0, &lambda_2) ;
-  val ignore_8 = write_block (block_2, 1, &`+`) ; block_2
+  val block_2 = allocate_block (1) ;
+  val ignore_7 = write_block (block_2, 0, &lambda_2) ;
+  block_2
 val main =
   print_int
   (

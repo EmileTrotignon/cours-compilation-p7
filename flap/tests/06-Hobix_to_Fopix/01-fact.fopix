@@ -1,21 +1,20 @@
-val fact =
-  allocate_block (5)
-def lambda_1 (closure_1, n) =
+def lambda_for_fact_1 (closure_for_fact_1, n) =
   if (n =? 0) then
     1
   else
     (n
     *
     call
-    (read_block (read_block (closure_1, 4), 0))
+    (read_block (read_block (closure_for_fact_1, 1), 0))
     with
-    (read_block (closure_1, 4), (n - 1)))
+    (read_block (closure_for_fact_1, 1), (n - 1)))
   end
 val fact =
-  val ignore_6 = write_block (fact, 0, &lambda_1) ;
-  val ignore_5 = write_block (fact, 1, &`*`) ;
-  val ignore_4 = write_block (fact, 2, &`-`) ;
-  val ignore_3 = write_block (fact, 3, &`=?`) ;
-  val ignore_2 = write_block (fact, 4, fact) ; fact
+  allocate_block (2)
+val fact =
+  val ignore_3 =
+    write_block (fact, 0, &lambda_for_fact_1)
+    ;
+  val ignore_2 = write_block (fact, 1, fact) ; fact
 val main =
   print_int (call (read_block (fact, 0)) with (fact, 5))

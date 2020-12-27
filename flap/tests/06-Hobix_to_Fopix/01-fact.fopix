@@ -1,20 +1,160 @@
-def lambda_for_fact_1 (closure_for_fact_1, n) =
-  if (n =? 0) then
+def lambda_`+` (arg_0, arg_1, arg_2) =
+  (arg_1 + arg_2)
+val `+` =
+  val `+` = allocate_block (1) ;
+  val ignore_1 = write_block (`+`, 0, &lambda_`+`) ; `+`
+def lambda_`-` (arg_0, arg_1, arg_2) =
+  (arg_1 - arg_2)
+val `-` =
+  val `-` = allocate_block (1) ;
+  val ignore_2 = write_block (`-`, 0, &lambda_`-`) ; `-`
+def lambda_`*` (arg_0, arg_1, arg_2) =
+  (arg_1 * arg_2)
+val `*` =
+  val `*` = allocate_block (1) ;
+  val ignore_3 = write_block (`*`, 0, &lambda_`*`) ; `*`
+def lambda_`/` (arg_0, arg_1, arg_2) =
+  (arg_1 / arg_2)
+val `/` =
+  val `/` = allocate_block (1) ;
+  val ignore_4 = write_block (`/`, 0, &lambda_`/`) ; `/`
+def lambda_`<?` (arg_0, arg_1, arg_2) =
+  (arg_1 <? arg_2)
+val `<?` =
+  val `<?` = allocate_block (1) ;
+  val ignore_5 = write_block (`<?`, 0, &lambda_`<?`) ;
+  `<?`
+def lambda_`>?` (arg_0, arg_1, arg_2) =
+  (arg_1 >? arg_2)
+val `>?` =
+  val `>?` = allocate_block (1) ;
+  val ignore_6 = write_block (`>?`, 0, &lambda_`>?`) ;
+  `>?`
+def lambda_`<=?` (arg_0, arg_1, arg_2) =
+  (arg_1 <=? arg_2)
+val `<=?` =
+  val `<=?` = allocate_block (1) ;
+  val ignore_7 = write_block (`<=?`, 0, &lambda_`<=?`) ;
+  `<=?`
+def lambda_`>=?` (arg_0, arg_1, arg_2) =
+  (arg_1 >=? arg_2)
+val `>=?` =
+  val `>=?` = allocate_block (1) ;
+  val ignore_8 = write_block (`>=?`, 0, &lambda_`>=?`) ;
+  `>=?`
+def lambda_`=?` (arg_0, arg_1, arg_2) =
+  (arg_1 =? arg_2)
+val `=?` =
+  val `=?` = allocate_block (1) ;
+  val ignore_9 = write_block (`=?`, 0, &lambda_`=?`) ;
+  `=?`
+def lambda_`&&` (arg_0, arg_1, arg_2) =
+  `&&` (arg_1, arg_2)
+val `&&` =
+  val `&&` = allocate_block (1) ;
+  val ignore_10 = write_block (`&&`, 0, &lambda_`&&`) ;
+  `&&`
+def lambda_`||` (arg_0, arg_1, arg_2) =
+  `||` (arg_1, arg_2)
+val `||` =
+  val `||` = allocate_block (1) ;
+  val ignore_11 = write_block (`||`, 0, &lambda_`||`) ;
+  `||`
+def lambda_write_block (arg_0, arg_1, arg_2, arg_3) =
+  write_block (arg_1, arg_2, arg_3)
+val write_block =
+  val write_block = allocate_block (1) ;
+  val ignore_12 =
+    write_block (write_block, 0, &lambda_write_block)
+    ;
+  write_block
+def lambda_read_block (arg_0, arg_1, arg_2) =
+  read_block (arg_1, arg_2)
+val read_block =
+  val read_block = allocate_block (1) ;
+  val ignore_13 =
+    write_block (read_block, 0, &lambda_read_block)
+    ;
+  read_block
+def lambda_allocate_block (arg_0, arg_1, arg_2) =
+  allocate_block (arg_1, arg_2)
+val allocate_block =
+  val allocate_block = allocate_block (1) ;
+  val ignore_14 =
+    write_block (allocate_block, 0, &lambda_allocate_block)
+    ;
+  allocate_block
+def lambda_observe_int (arg_0, arg_1) =
+  observe_int (arg_1)
+val observe_int =
+  val observe_int = allocate_block (1) ;
+  val ignore_15 =
+    write_block (observe_int, 0, &lambda_observe_int)
+    ;
+  observe_int
+def lambda_print_int (arg_0, arg_1) =
+  print_int (arg_1)
+val print_int =
+  val print_int = allocate_block (1) ;
+  val ignore_16 =
+    write_block (print_int, 0, &lambda_print_int)
+    ;
+  print_int
+def lambda_print_string (arg_0, arg_1) =
+  print_string (arg_1)
+val print_string =
+  val print_string = allocate_block (1) ;
+  val ignore_17 =
+    write_block (print_string, 0, &lambda_print_string)
+    ;
+  print_string
+def lambda_equal_char (arg_0, arg_1) =
+  equal_char (arg_1)
+val equal_char =
+  val equal_char = allocate_block (1) ;
+  val ignore_18 =
+    write_block (equal_char, 0, &lambda_equal_char)
+    ;
+  equal_char
+def lambda_equal_string (arg_0, arg_1) =
+  equal_string (arg_1)
+val equal_string =
+  val equal_string = allocate_block (1) ;
+  val ignore_19 =
+    write_block (equal_string, 0, &lambda_equal_string)
+    ;
+  equal_string
+def lambda_for_fact_1 (closure_for_fact_20, n) =
+  if call (read_block (`=?`, 0)) with (`=?`, n, 0) then
     1
   else
-    (n
-    *
     call
-    (read_block (read_block (closure_for_fact_1, 1), 0))
+    (read_block (`*`, 0))
     with
-    (read_block (closure_for_fact_1, 1), (n - 1)))
+    (
+      `*`,
+      n,
+      call
+      (read_block (read_block (closure_for_fact_20, 1), 0))
+      with
+      (
+        read_block (closure_for_fact_20, 1),
+        call
+        (read_block (`-`, 0))
+        with
+        (`-`, n, 1)
+      )
+    )
   end
 val fact =
   allocate_block (2)
 val fact =
-  val ignore_3 =
+  val ignore_22 =
     write_block (fact, 0, &lambda_for_fact_1)
     ;
-  val ignore_2 = write_block (fact, 1, fact) ; fact
+  val ignore_21 = write_block (fact, 1, fact) ; fact
 val main =
-  print_int (call (read_block (fact, 0)) with (fact, 5))
+  call
+  (read_block (print_int, 0))
+  with
+  (print_int, call (read_block (fact, 0)) with (fact, 5))

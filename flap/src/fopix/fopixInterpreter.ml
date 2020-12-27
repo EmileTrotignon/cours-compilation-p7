@@ -249,8 +249,9 @@ and expression runtime = function
       | VString s -> print_string s
       | _         -> assert false (* By typing. *) )
   | FunCall (FunId "write_block", [ location; index; e ]) -> (
+      let location = expression runtime location in
       match
-        ( value_as_address (expression runtime location),
+        ( value_as_address (location),
           value_as_int (expression runtime index) )
       with
       | Some location, Some index ->
@@ -258,7 +259,7 @@ and expression runtime = function
           let block = Memory.dereference runtime.memory location in
           Memory.write block index v;
           VUnit
-      | None, _                   -> error [] "Expecting a block."
+      | None, _                   -> error [] ("Expecting a block. Got :" ^ (print_value runtime.memory location))
       | _, None                   -> error [] "Expecting an integer." )
   | FunCall (FunId (("`&&`" | "`||`") as binop), [ e1; e2 ]) -> (
       match (expression runtime e1, binop) with
@@ -274,7 +275,9 @@ and expression runtime = function
         try List.assoc f runtime.functions
         with Not_found ->
           let (FunId f) = f in
-          error [] (Printf.sprintf "Unbound function `%s'." f)
+          if is_binary_primitive f then
+            error [] (Printf.sprintf "Incorrect arity for primitive %s." f)
+          else error [] (Printf.sprintf "Unbound function `%s'." f)
       in
       let runtime =
         {

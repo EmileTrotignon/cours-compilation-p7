@@ -116,14 +116,6 @@ intptr_t* allocate_block (int64_t n) {
   }
   
 *)
-let is_primitive = function
-  | "`+`" | "`-`" | "`*`" | "`/`" | "`<?`" | "`>?`" | "`<=?`" | "`>=?`" | "`=?`"
-  | "`&&`" | "`||`" | "write_block" | "read_block" | "allocate_block"
-  | "observe_int" | "print_int" | "print_string" | "equal_char" | "equal_string"
-    ->
-      true
-  | _ -> false
-
 let make_fresh_function_identifier =
   let r = ref 0 in
   fun ?(prefix = "") () ->
@@ -151,6 +143,63 @@ let write_block e i v = T.(FunCall (FunId "write_block", [ e; i; v ]))
 let read_block e i = T.(FunCall (FunId "read_block", [ e; i ]))
 
 let lint i = T.(Literal (LInt (Int64.of_int i)))
+
+let lfun f = T.(Literal (LFun (FunId f)))
+
+let variable v = T.Variable (T.Id v)
+
+let is_primitive = function
+  | "`+`" | "`-`" | "`*`" | "`/`" | "`<?`" | "`>?`" | "`<=?`" | "`>=?`" | "`=?`"
+  | "`&&`" | "`||`" | "write_block" | "read_block" | "allocate_block"
+  | "observe_int" | "print_int" | "print_string" | "equal_char" | "equal_string"
+    ->
+      true
+  | _ -> false
+
+let primitives =
+  List.flatten
+    (List.map
+       (fun (id, arity) ->
+         let lambda_id = T.FunId ("lambda_" ^ id) in
+         [
+           T.DefineFunction
+             ( lambda_id,
+               List.init (arity + 1) (fun i -> T.Id (Printf.sprintf "arg_%i" i)),
+               T.FunCall
+                 ( T.FunId id,
+                   List.init arity (fun i ->
+                       variable (Printf.sprintf "arg_%i" (i + 1))) ) );
+           T.DefineValue
+             ( T.Id id,
+               T.Define
+                 ( T.Id id,
+                   allocate_block @@ lint 1,
+                   seq
+                     (write_block (variable id) (lint 0)
+                        (T.Literal (T.LFun lambda_id)))
+                     (variable id) ) );
+         ])
+       [
+         ("`+`", 2);
+         ("`-`", 2);
+         ("`*`", 2);
+         ("`/`", 2);
+         ("`<?`", 2);
+         ("`>?`", 2);
+         ("`<=?`", 2);
+         ("`>=?`", 2);
+         ("`=?`", 2);
+         ("`&&`", 2);
+         ("`||`", 2);
+         ("write_block", 3);
+         ("read_block", 2);
+         ("allocate_block", 2);
+         ("observe_int", 1);
+         ("print_int", 1);
+         ("print_string", 1);
+         ("equal_char", 1);
+         ("equal_string", 1);
+       ])
 
 (** [free_variables e] returns the list of free variables that
      occur in [e].*)
@@ -250,7 +299,7 @@ let arity_of_external id env =
 let translate (p : S.t) env =
   let rec program env defs =
     let env, defs = ExtStd.List.foldmap definition env defs in
-    (List.flatten defs, env)
+    (List.flatten (primitives :: defs), env)
   and definition env = function
     | S.DeclareExtern (id, n) ->
         let env = bind_external id n env in
@@ -274,23 +323,20 @@ let translate (p : S.t) env =
       List.map
         (fun (name, expr) ->
           ( identifier name,
-            allocate_block
-              (T.Literal
-                 (T.LInt (Mint.of_int (List.length (free_variables expr) + 1))))
-          ))
+            allocate_block @@ lint (List.length (free_variables expr) + 1) ))
         rdefs
       @ List.combine (List.map identifier s_ids) expressions )
   and expression ?self env =
     let t_expr_of_s_id env = function
       | S.Id id as x ->
-          if is_primitive id then T.Literal (T.LFun (T.FunId id))
-          else
-            let xc =
-              match Dict.lookup x env.vars with
-              | None   -> T.Variable (identifier x)
-              | Some e -> e
-            in
-            xc
+          (* if is_primitive id then T.Literal (T.LFun (T.FunId id))
+             else *)
+          let xc =
+            match Dict.lookup x env.vars with
+            | None   -> T.Variable (identifier x)
+            | Some e -> e
+          in
+          xc
     in
     function
     | S.Literal l               ->
@@ -323,9 +369,8 @@ let translate (p : S.t) env =
         ( defs @ List.concat defss,
           match expr with
           | T.Literal (T.LFun id) -> T.FunCall (id, exprs')
-          | _                     ->
-              T.UnknownFunCall
-                (read_block expr (T.Literal (T.LInt Int64.zero)), expr :: exprs')
+          | _                     -> T.UnknownFunCall
+                                       (read_block expr (lint 0), expr :: exprs')
         ) )
     | S.IfThenElse (a, b, c)    ->
         (* print_endline "ifthenelse"; *)
@@ -352,10 +397,7 @@ let translate (p : S.t) env =
             !i
         in
         let my_bind env id =
-          bind_var id
-            (read_block (T.Variable closure_id)
-               (T.Literal (T.LInt (Mint.of_int (get_i ())))))
-            env
+          bind_var id (read_block (T.Variable closure_id) (lint (get_i ()))) env
         in
         let block_id =
           match self with
@@ -374,12 +416,12 @@ let translate (p : S.t) env =
         in
         let set_block =
           seqs
-            ( write_block (T.Variable block_id) (T.Literal (T.LInt Int64.zero))
+            ( write_block (T.Variable block_id) (lint 0)
                 (T.Literal (T.LFun f_id))
               :: List.mapi
                    (fun i fv ->
                      write_block (T.Variable block_id)
-                       (T.Literal (T.LInt (Mint.of_int (i + 1))))
+                       (lint (i + 1))
                        (t_expr_of_s_id env fv))
                    fvs
             @ [ T.Variable block_id ] )
@@ -390,8 +432,7 @@ let translate (p : S.t) env =
           | None   ->
               T.Define
                 ( block_id,
-                  allocate_block
-                    (T.Literal (T.LInt (Mint.of_int (List.length fvs + 1)))),
+                  allocate_block (lint (List.length fvs + 1)),
                   set_block )
           | Some _ -> set_block ) )
     | S.AllocateBlock a         ->

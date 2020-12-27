@@ -1,123 +1,249 @@
-def lambda_3 (closure_1, f) =
-  val block_4 = allocate_block (2) ;
-  val ignore_11 = write_block (block_4, 0, &lambda_2) ;
-  val ignore_10 = write_block (block_4, 1, f) ; block_4
-def lambda_2 (closure_3, x) =
-  val block_6 = allocate_block (3) ;
-  val ignore_9 = write_block (block_6, 0, &lambda_1) ;
-  val ignore_8 =
-    write_block (block_6, 1, read_block (closure_3, 1))
+def lambda_`+` (arg_0, arg_1, arg_2) =
+  (arg_1 + arg_2)
+val `+` =
+  val `+` = allocate_block (1) ;
+  val ignore_1 = write_block (`+`, 0, &lambda_`+`) ; `+`
+def lambda_`-` (arg_0, arg_1, arg_2) =
+  (arg_1 - arg_2)
+val `-` =
+  val `-` = allocate_block (1) ;
+  val ignore_2 = write_block (`-`, 0, &lambda_`-`) ; `-`
+def lambda_`*` (arg_0, arg_1, arg_2) =
+  (arg_1 * arg_2)
+val `*` =
+  val `*` = allocate_block (1) ;
+  val ignore_3 = write_block (`*`, 0, &lambda_`*`) ; `*`
+def lambda_`/` (arg_0, arg_1, arg_2) =
+  (arg_1 / arg_2)
+val `/` =
+  val `/` = allocate_block (1) ;
+  val ignore_4 = write_block (`/`, 0, &lambda_`/`) ; `/`
+def lambda_`<?` (arg_0, arg_1, arg_2) =
+  (arg_1 <? arg_2)
+val `<?` =
+  val `<?` = allocate_block (1) ;
+  val ignore_5 = write_block (`<?`, 0, &lambda_`<?`) ;
+  `<?`
+def lambda_`>?` (arg_0, arg_1, arg_2) =
+  (arg_1 >? arg_2)
+val `>?` =
+  val `>?` = allocate_block (1) ;
+  val ignore_6 = write_block (`>?`, 0, &lambda_`>?`) ;
+  `>?`
+def lambda_`<=?` (arg_0, arg_1, arg_2) =
+  (arg_1 <=? arg_2)
+val `<=?` =
+  val `<=?` = allocate_block (1) ;
+  val ignore_7 = write_block (`<=?`, 0, &lambda_`<=?`) ;
+  `<=?`
+def lambda_`>=?` (arg_0, arg_1, arg_2) =
+  (arg_1 >=? arg_2)
+val `>=?` =
+  val `>=?` = allocate_block (1) ;
+  val ignore_8 = write_block (`>=?`, 0, &lambda_`>=?`) ;
+  `>=?`
+def lambda_`=?` (arg_0, arg_1, arg_2) =
+  (arg_1 =? arg_2)
+val `=?` =
+  val `=?` = allocate_block (1) ;
+  val ignore_9 = write_block (`=?`, 0, &lambda_`=?`) ;
+  `=?`
+def lambda_`&&` (arg_0, arg_1, arg_2) =
+  `&&` (arg_1, arg_2)
+val `&&` =
+  val `&&` = allocate_block (1) ;
+  val ignore_10 = write_block (`&&`, 0, &lambda_`&&`) ;
+  `&&`
+def lambda_`||` (arg_0, arg_1, arg_2) =
+  `||` (arg_1, arg_2)
+val `||` =
+  val `||` = allocate_block (1) ;
+  val ignore_11 = write_block (`||`, 0, &lambda_`||`) ;
+  `||`
+def lambda_write_block (arg_0, arg_1, arg_2, arg_3) =
+  write_block (arg_1, arg_2, arg_3)
+val write_block =
+  val write_block = allocate_block (1) ;
+  val ignore_12 =
+    write_block (write_block, 0, &lambda_write_block)
     ;
-  val ignore_7 = write_block (block_6, 2, x) ; block_6
-def lambda_1 (closure_5, y) =
+  write_block
+def lambda_read_block (arg_0, arg_1, arg_2) =
+  read_block (arg_1, arg_2)
+val read_block =
+  val read_block = allocate_block (1) ;
+  val ignore_13 =
+    write_block (read_block, 0, &lambda_read_block)
+    ;
+  read_block
+def lambda_allocate_block (arg_0, arg_1, arg_2) =
+  allocate_block (arg_1, arg_2)
+val allocate_block =
+  val allocate_block = allocate_block (1) ;
+  val ignore_14 =
+    write_block (allocate_block, 0, &lambda_allocate_block)
+    ;
+  allocate_block
+def lambda_observe_int (arg_0, arg_1) =
+  observe_int (arg_1)
+val observe_int =
+  val observe_int = allocate_block (1) ;
+  val ignore_15 =
+    write_block (observe_int, 0, &lambda_observe_int)
+    ;
+  observe_int
+def lambda_print_int (arg_0, arg_1) =
+  print_int (arg_1)
+val print_int =
+  val print_int = allocate_block (1) ;
+  val ignore_16 =
+    write_block (print_int, 0, &lambda_print_int)
+    ;
+  print_int
+def lambda_print_string (arg_0, arg_1) =
+  print_string (arg_1)
+val print_string =
+  val print_string = allocate_block (1) ;
+  val ignore_17 =
+    write_block (print_string, 0, &lambda_print_string)
+    ;
+  print_string
+def lambda_equal_char (arg_0, arg_1) =
+  equal_char (arg_1)
+val equal_char =
+  val equal_char = allocate_block (1) ;
+  val ignore_18 =
+    write_block (equal_char, 0, &lambda_equal_char)
+    ;
+  equal_char
+def lambda_equal_string (arg_0, arg_1) =
+  equal_string (arg_1)
+val equal_string =
+  val equal_string = allocate_block (1) ;
+  val ignore_19 =
+    write_block (equal_string, 0, &lambda_equal_string)
+    ;
+  equal_string
+def lambda_3 (closure_20, f) =
+  val block_23 = allocate_block (2) ;
+  val ignore_30 = write_block (block_23, 0, &lambda_2) ;
+  val ignore_29 = write_block (block_23, 1, f) ; block_23
+def lambda_2 (closure_22, x) =
+  val block_25 = allocate_block (3) ;
+  val ignore_28 = write_block (block_25, 0, &lambda_1) ;
+  val ignore_27 =
+    write_block (block_25, 1, read_block (closure_22, 1))
+    ;
+  val ignore_26 = write_block (block_25, 2, x) ; block_25
+def lambda_1 (closure_24, y) =
   call
-  (read_block (read_block (closure_5, 1), 0))
+  (read_block (read_block (closure_24, 1), 0))
   with
   (
-    read_block (closure_5, 1),
-    read_block (closure_5, 2),
+    read_block (closure_24, 1),
+    read_block (closure_24, 2),
     y
   )
 val curry_1_2 =
-  val block_2 = allocate_block (1) ;
-  val ignore_12 = write_block (block_2, 0, &lambda_3) ;
-  block_2
-def lambda_6 (closure_13, f) =
-  val block_16 = allocate_block (2) ;
-  val ignore_23 = write_block (block_16, 0, &lambda_5) ;
-  val ignore_22 = write_block (block_16, 1, f) ; block_16
-def lambda_5 (closure_15, x) =
-  val block_18 = allocate_block (3) ;
-  val ignore_21 = write_block (block_18, 0, &lambda_4) ;
-  val ignore_20 =
-    write_block (block_18, 1, read_block (closure_15, 1))
+  val block_21 = allocate_block (1) ;
+  val ignore_31 = write_block (block_21, 0, &lambda_3) ;
+  block_21
+def lambda_6 (closure_32, f) =
+  val block_35 = allocate_block (2) ;
+  val ignore_42 = write_block (block_35, 0, &lambda_5) ;
+  val ignore_41 = write_block (block_35, 1, f) ; block_35
+def lambda_5 (closure_34, x) =
+  val block_37 = allocate_block (3) ;
+  val ignore_40 = write_block (block_37, 0, &lambda_4) ;
+  val ignore_39 =
+    write_block (block_37, 1, read_block (closure_34, 1))
     ;
-  val ignore_19 = write_block (block_18, 2, x) ; block_18
-def lambda_4 (closure_17, y1, y2) =
+  val ignore_38 = write_block (block_37, 2, x) ; block_37
+def lambda_4 (closure_36, y1, y2) =
   call
-  (read_block (read_block (closure_17, 1), 0))
+  (read_block (read_block (closure_36, 1), 0))
   with
   (
-    read_block (closure_17, 1),
-    read_block (closure_17, 2),
+    read_block (closure_36, 1),
+    read_block (closure_36, 2),
     y1,
     y2
   )
 val curry_1_3 =
-  val block_14 = allocate_block (1) ;
-  val ignore_24 = write_block (block_14, 0, &lambda_6) ;
-  block_14
-def lambda_9 (closure_25, f) =
-  val block_28 = allocate_block (2) ;
-  val ignore_35 = write_block (block_28, 0, &lambda_8) ;
-  val ignore_34 = write_block (block_28, 1, f) ; block_28
-def lambda_8 (closure_27, x) =
-  val block_30 = allocate_block (3) ;
-  val ignore_33 = write_block (block_30, 0, &lambda_7) ;
-  val ignore_32 =
-    write_block (block_30, 1, read_block (closure_27, 1))
+  val block_33 = allocate_block (1) ;
+  val ignore_43 = write_block (block_33, 0, &lambda_6) ;
+  block_33
+def lambda_9 (closure_44, f) =
+  val block_47 = allocate_block (2) ;
+  val ignore_54 = write_block (block_47, 0, &lambda_8) ;
+  val ignore_53 = write_block (block_47, 1, f) ; block_47
+def lambda_8 (closure_46, x) =
+  val block_49 = allocate_block (3) ;
+  val ignore_52 = write_block (block_49, 0, &lambda_7) ;
+  val ignore_51 =
+    write_block (block_49, 1, read_block (closure_46, 1))
     ;
-  val ignore_31 = write_block (block_30, 2, x) ; block_30
-def lambda_7 (closure_29, y1, y2, y3) =
+  val ignore_50 = write_block (block_49, 2, x) ; block_49
+def lambda_7 (closure_48, y1, y2, y3) =
   call
-  (read_block (read_block (closure_29, 1), 0))
+  (read_block (read_block (closure_48, 1), 0))
   with
   (
-    read_block (closure_29, 1),
-    read_block (closure_29, 2),
+    read_block (closure_48, 1),
+    read_block (closure_48, 2),
     y1,
     y2,
     y3
   )
 val curry_1_4 =
-  val block_26 = allocate_block (1) ;
-  val ignore_36 = write_block (block_26, 0, &lambda_9) ;
-  block_26
-def lambda_12 (closure_37, f) =
-  val block_40 = allocate_block (2) ;
-  val ignore_47 = write_block (block_40, 0, &lambda_11) ;
-  val ignore_46 = write_block (block_40, 1, f) ; block_40
-def lambda_11 (closure_39, x) =
-  val block_42 = allocate_block (3) ;
-  val ignore_45 = write_block (block_42, 0, &lambda_10) ;
-  val ignore_44 =
-    write_block (block_42, 1, read_block (closure_39, 1))
+  val block_45 = allocate_block (1) ;
+  val ignore_55 = write_block (block_45, 0, &lambda_9) ;
+  block_45
+def lambda_12 (closure_56, f) =
+  val block_59 = allocate_block (2) ;
+  val ignore_66 = write_block (block_59, 0, &lambda_11) ;
+  val ignore_65 = write_block (block_59, 1, f) ; block_59
+def lambda_11 (closure_58, x) =
+  val block_61 = allocate_block (3) ;
+  val ignore_64 = write_block (block_61, 0, &lambda_10) ;
+  val ignore_63 =
+    write_block (block_61, 1, read_block (closure_58, 1))
     ;
-  val ignore_43 = write_block (block_42, 2, x) ; block_42
-def lambda_10 (closure_41, y1, y2, y3, y4) =
+  val ignore_62 = write_block (block_61, 2, x) ; block_61
+def lambda_10 (closure_60, y1, y2, y3, y4) =
   call
-  (read_block (read_block (closure_41, 1), 0))
+  (read_block (read_block (closure_60, 1), 0))
   with
   (
-    read_block (closure_41, 1),
-    read_block (closure_41, 2),
+    read_block (closure_60, 1),
+    read_block (closure_60, 2),
     y1,
     y2,
     y3,
     y4
   )
 val curry_1_5 =
-  val block_38 = allocate_block (1) ;
-  val ignore_48 = write_block (block_38, 0, &lambda_12) ;
-  block_38
-def lambda_15 (closure_49, f) =
-  val block_52 = allocate_block (2) ;
-  val ignore_59 = write_block (block_52, 0, &lambda_14) ;
-  val ignore_58 = write_block (block_52, 1, f) ; block_52
-def lambda_14 (closure_51, x) =
-  val block_54 = allocate_block (3) ;
-  val ignore_57 = write_block (block_54, 0, &lambda_13) ;
-  val ignore_56 =
-    write_block (block_54, 1, read_block (closure_51, 1))
+  val block_57 = allocate_block (1) ;
+  val ignore_67 = write_block (block_57, 0, &lambda_12) ;
+  block_57
+def lambda_15 (closure_68, f) =
+  val block_71 = allocate_block (2) ;
+  val ignore_78 = write_block (block_71, 0, &lambda_14) ;
+  val ignore_77 = write_block (block_71, 1, f) ; block_71
+def lambda_14 (closure_70, x) =
+  val block_73 = allocate_block (3) ;
+  val ignore_76 = write_block (block_73, 0, &lambda_13) ;
+  val ignore_75 =
+    write_block (block_73, 1, read_block (closure_70, 1))
     ;
-  val ignore_55 = write_block (block_54, 2, x) ; block_54
-def lambda_13 (closure_53, y1, y2, y3, y4, y5) =
+  val ignore_74 = write_block (block_73, 2, x) ; block_73
+def lambda_13 (closure_72, y1, y2, y3, y4, y5) =
   call
-  (read_block (read_block (closure_53, 1), 0))
+  (read_block (read_block (closure_72, 1), 0))
   with
   (
-    read_block (closure_53, 1),
-    read_block (closure_53, 2),
+    read_block (closure_72, 1),
+    read_block (closure_72, 2),
     y1,
     y2,
     y3,
@@ -125,42 +251,99 @@ def lambda_13 (closure_53, y1, y2, y3, y4, y5) =
     y5
   )
 val curry_1_6 =
-  val block_50 = allocate_block (1) ;
-  val ignore_60 = write_block (block_50, 0, &lambda_15) ;
-  block_50
-def lambda_16 (closure_61, x1, x2) =
-  (x1 + x2)
+  val block_69 = allocate_block (1) ;
+  val ignore_79 = write_block (block_69, 0, &lambda_15) ;
+  block_69
+def lambda_16 (closure_80, x1, x2) =
+  call (read_block (`+`, 0)) with (`+`, x1, x2)
 val f2 =
-  val block_62 = allocate_block (1) ;
-  val ignore_63 = write_block (block_62, 0, &lambda_16) ;
-  block_62
-def lambda_17 (closure_64, x1, x2, x3) =
-  ((x1 + x2) + x3)
+  val block_81 = allocate_block (1) ;
+  val ignore_82 = write_block (block_81, 0, &lambda_16) ;
+  block_81
+def lambda_17 (closure_83, x1, x2, x3) =
+  call
+  (read_block (`+`, 0))
+  with
+  (`+`, call (read_block (`+`, 0)) with (`+`, x1, x2), x3)
 val f3 =
-  val block_65 = allocate_block (1) ;
-  val ignore_66 = write_block (block_65, 0, &lambda_17) ;
-  block_65
-def lambda_18 (closure_67, x1, x2, x3, x4) =
-  (((x1 + x2) + x3) + x4)
-val f4 =
-  val block_68 = allocate_block (1) ;
-  val ignore_69 = write_block (block_68, 0, &lambda_18) ;
-  block_68
-def lambda_19 (closure_70, x1, x2, x3, x4, x5) =
-  ((((x1 + x2) + x3) + x4) + x5)
-val f5 =
-  val block_71 = allocate_block (1) ;
-  val ignore_72 = write_block (block_71, 0, &lambda_19) ;
-  block_71
-def lambda_20 (closure_73, x1, x2, x3, x4, x5, x6) =
-  (((((x1 + x2) + x3) + x4) + x5) + x6)
-val f6 =
-  val block_74 = allocate_block (1) ;
-  val ignore_75 = write_block (block_74, 0, &lambda_20) ;
-  block_74
-val test1_2 =
-  print_int
+  val block_84 = allocate_block (1) ;
+  val ignore_85 = write_block (block_84, 0, &lambda_17) ;
+  block_84
+def lambda_18 (closure_86, x1, x2, x3, x4) =
+  call
+  (read_block (`+`, 0))
+  with
   (
+    `+`,
+    call
+    (read_block (`+`, 0))
+    with
+    (`+`, call (read_block (`+`, 0)) with (`+`, x1, x2), x3),
+    x4
+  )
+val f4 =
+  val block_87 = allocate_block (1) ;
+  val ignore_88 = write_block (block_87, 0, &lambda_18) ;
+  block_87
+def lambda_19 (closure_89, x1, x2, x3, x4, x5) =
+  call
+  (read_block (`+`, 0))
+  with
+  (
+    `+`,
+    call
+    (read_block (`+`, 0))
+    with
+    (
+      `+`,
+      call
+      (read_block (`+`, 0))
+      with
+      (`+`, call (read_block (`+`, 0)) with (`+`, x1, x2), x3),
+      x4
+    ),
+    x5
+  )
+val f5 =
+  val block_90 = allocate_block (1) ;
+  val ignore_91 = write_block (block_90, 0, &lambda_19) ;
+  block_90
+def lambda_20 (closure_92, x1, x2, x3, x4, x5, x6) =
+  call
+  (read_block (`+`, 0))
+  with
+  (
+    `+`,
+    call
+    (read_block (`+`, 0))
+    with
+    (
+      `+`,
+      call
+      (read_block (`+`, 0))
+      with
+      (
+        `+`,
+        call
+        (read_block (`+`, 0))
+        with
+        (`+`, call (read_block (`+`, 0)) with (`+`, x1, x2), x3),
+        x4
+      ),
+      x5
+    ),
+    x6
+  )
+val f6 =
+  val block_93 = allocate_block (1) ;
+  val ignore_94 = write_block (block_93, 0, &lambda_20) ;
+  block_93
+val test1_2 =
+  call
+  (read_block (print_int, 0))
+  with
+  (
+    print_int,
     call
     (read_block
     (
@@ -206,8 +389,11 @@ val test1_2 =
     )
   )
 val test1_3 =
-  print_int
+  call
+  (read_block (print_int, 0))
+  with
   (
+    print_int,
     call
     (read_block
     (
@@ -254,8 +440,11 @@ val test1_3 =
     )
   )
 val test1_4 =
-  print_int
+  call
+  (read_block (print_int, 0))
+  with
   (
+    print_int,
     call
     (read_block
     (
@@ -303,8 +492,11 @@ val test1_4 =
     )
   )
 val test1_5 =
-  print_int
+  call
+  (read_block (print_int, 0))
+  with
   (
+    print_int,
     call
     (read_block
     (
@@ -353,8 +545,11 @@ val test1_5 =
     )
   )
 val test1_6 =
-  print_int
+  call
+  (read_block (print_int, 0))
+  with
   (
+    print_int,
     call
     (read_block
     (
@@ -403,148 +598,159 @@ val test1_6 =
       6
     )
   )
-def lambda_23 (closure_76, f) =
-  val block_79 = allocate_block (2) ;
-  val ignore_86 = write_block (block_79, 0, &lambda_22) ;
-  val ignore_85 = write_block (block_79, 1, f) ; block_79
-def lambda_22 (closure_78, o, x) =
-  val block_81 = allocate_block (3) ;
-  val ignore_84 = write_block (block_81, 0, &lambda_21) ;
-  val ignore_83 =
-    write_block (block_81, 1, read_block (closure_78, 1))
+def lambda_23 (closure_95, f) =
+  val block_98 = allocate_block (2) ;
+  val ignore_105 = write_block (block_98, 0, &lambda_22) ;
+  val ignore_104 = write_block (block_98, 1, f) ; block_98
+def lambda_22 (closure_97, o, x) =
+  val block_100 = allocate_block (3) ;
+  val ignore_103 =
+    write_block (block_100, 0, &lambda_21)
     ;
-  val ignore_82 = write_block (block_81, 2, x) ; block_81
-def lambda_21 (closure_80, y) =
+  val ignore_102 =
+    write_block (block_100, 1, read_block (closure_97, 1))
+    ;
+  val ignore_101 = write_block (block_100, 2, x) ;
+  block_100
+def lambda_21 (closure_99, y) =
   call
-  (read_block (read_block (closure_80, 1), 0))
+  (read_block (read_block (closure_99, 1), 0))
   with
   (
-    read_block (closure_80, 1),
-    read_block (closure_80, 2),
+    read_block (closure_99, 1),
+    read_block (closure_99, 2),
     y
   )
 val curry_2_2 =
-  val block_77 = allocate_block (1) ;
-  val ignore_87 = write_block (block_77, 0, &lambda_23) ;
-  block_77
-def lambda_26 (closure_88, f) =
-  val block_91 = allocate_block (2) ;
-  val ignore_98 = write_block (block_91, 0, &lambda_25) ;
-  val ignore_97 = write_block (block_91, 1, f) ; block_91
-def lambda_25 (closure_90, o, x) =
-  val block_93 = allocate_block (3) ;
-  val ignore_96 = write_block (block_93, 0, &lambda_24) ;
-  val ignore_95 =
-    write_block (block_93, 1, read_block (closure_90, 1))
+  val block_96 = allocate_block (1) ;
+  val ignore_106 = write_block (block_96, 0, &lambda_23) ;
+  block_96
+def lambda_26 (closure_107, f) =
+  val block_110 = allocate_block (2) ;
+  val ignore_117 =
+    write_block (block_110, 0, &lambda_25)
     ;
-  val ignore_94 = write_block (block_93, 2, x) ; block_93
-def lambda_24 (closure_92, y1, y2) =
+  val ignore_116 = write_block (block_110, 1, f) ;
+  block_110
+def lambda_25 (closure_109, o, x) =
+  val block_112 = allocate_block (3) ;
+  val ignore_115 =
+    write_block (block_112, 0, &lambda_24)
+    ;
+  val ignore_114 =
+    write_block (block_112, 1, read_block (closure_109, 1))
+    ;
+  val ignore_113 = write_block (block_112, 2, x) ;
+  block_112
+def lambda_24 (closure_111, y1, y2) =
   call
-  (read_block (read_block (closure_92, 1), 0))
+  (read_block (read_block (closure_111, 1), 0))
   with
   (
-    read_block (closure_92, 1),
-    read_block (closure_92, 2),
+    read_block (closure_111, 1),
+    read_block (closure_111, 2),
     y1,
     y2
   )
 val curry_2_3 =
-  val block_89 = allocate_block (1) ;
-  val ignore_99 = write_block (block_89, 0, &lambda_26) ;
-  block_89
-def lambda_29 (closure_100, f) =
-  val block_103 = allocate_block (2) ;
-  val ignore_110 =
-    write_block (block_103, 0, &lambda_28)
+  val block_108 = allocate_block (1) ;
+  val ignore_118 =
+    write_block (block_108, 0, &lambda_26)
     ;
-  val ignore_109 = write_block (block_103, 1, f) ;
-  block_103
-def lambda_28 (closure_102, o, x) =
-  val block_105 = allocate_block (3) ;
-  val ignore_108 =
-    write_block (block_105, 0, &lambda_27)
+  block_108
+def lambda_29 (closure_119, f) =
+  val block_122 = allocate_block (2) ;
+  val ignore_129 =
+    write_block (block_122, 0, &lambda_28)
     ;
-  val ignore_107 =
-    write_block (block_105, 1, read_block (closure_102, 1))
+  val ignore_128 = write_block (block_122, 1, f) ;
+  block_122
+def lambda_28 (closure_121, o, x) =
+  val block_124 = allocate_block (3) ;
+  val ignore_127 =
+    write_block (block_124, 0, &lambda_27)
     ;
-  val ignore_106 = write_block (block_105, 2, x) ;
-  block_105
-def lambda_27 (closure_104, y1, y2, y3) =
+  val ignore_126 =
+    write_block (block_124, 1, read_block (closure_121, 1))
+    ;
+  val ignore_125 = write_block (block_124, 2, x) ;
+  block_124
+def lambda_27 (closure_123, y1, y2, y3) =
   call
-  (read_block (read_block (closure_104, 1), 0))
+  (read_block (read_block (closure_123, 1), 0))
   with
   (
-    read_block (closure_104, 1),
-    read_block (closure_104, 2),
+    read_block (closure_123, 1),
+    read_block (closure_123, 2),
     y1,
     y2,
     y3
   )
 val curry_2_4 =
-  val block_101 = allocate_block (1) ;
-  val ignore_111 =
-    write_block (block_101, 0, &lambda_29)
+  val block_120 = allocate_block (1) ;
+  val ignore_130 =
+    write_block (block_120, 0, &lambda_29)
     ;
-  block_101
-def lambda_32 (closure_112, f) =
-  val block_115 = allocate_block (2) ;
-  val ignore_122 =
-    write_block (block_115, 0, &lambda_31)
+  block_120
+def lambda_32 (closure_131, f) =
+  val block_134 = allocate_block (2) ;
+  val ignore_141 =
+    write_block (block_134, 0, &lambda_31)
     ;
-  val ignore_121 = write_block (block_115, 1, f) ;
-  block_115
-def lambda_31 (closure_114, o, x) =
-  val block_117 = allocate_block (3) ;
-  val ignore_120 =
-    write_block (block_117, 0, &lambda_30)
+  val ignore_140 = write_block (block_134, 1, f) ;
+  block_134
+def lambda_31 (closure_133, o, x) =
+  val block_136 = allocate_block (3) ;
+  val ignore_139 =
+    write_block (block_136, 0, &lambda_30)
     ;
-  val ignore_119 =
-    write_block (block_117, 1, read_block (closure_114, 1))
+  val ignore_138 =
+    write_block (block_136, 1, read_block (closure_133, 1))
     ;
-  val ignore_118 = write_block (block_117, 2, x) ;
-  block_117
-def lambda_30 (closure_116, y1, y2, y3, y4) =
+  val ignore_137 = write_block (block_136, 2, x) ;
+  block_136
+def lambda_30 (closure_135, y1, y2, y3, y4) =
   call
-  (read_block (read_block (closure_116, 1), 0))
+  (read_block (read_block (closure_135, 1), 0))
   with
   (
-    read_block (closure_116, 1),
-    read_block (closure_116, 2),
+    read_block (closure_135, 1),
+    read_block (closure_135, 2),
     y1,
     y2,
     y3,
     y4
   )
 val curry_2_5 =
-  val block_113 = allocate_block (1) ;
-  val ignore_123 =
-    write_block (block_113, 0, &lambda_32)
+  val block_132 = allocate_block (1) ;
+  val ignore_142 =
+    write_block (block_132, 0, &lambda_32)
     ;
-  block_113
-def lambda_35 (closure_124, f) =
-  val block_127 = allocate_block (2) ;
-  val ignore_134 =
-    write_block (block_127, 0, &lambda_34)
+  block_132
+def lambda_35 (closure_143, f) =
+  val block_146 = allocate_block (2) ;
+  val ignore_153 =
+    write_block (block_146, 0, &lambda_34)
     ;
-  val ignore_133 = write_block (block_127, 1, f) ;
-  block_127
-def lambda_34 (closure_126, o, x) =
-  val block_129 = allocate_block (3) ;
-  val ignore_132 =
-    write_block (block_129, 0, &lambda_33)
+  val ignore_152 = write_block (block_146, 1, f) ;
+  block_146
+def lambda_34 (closure_145, o, x) =
+  val block_148 = allocate_block (3) ;
+  val ignore_151 =
+    write_block (block_148, 0, &lambda_33)
     ;
-  val ignore_131 =
-    write_block (block_129, 1, read_block (closure_126, 1))
+  val ignore_150 =
+    write_block (block_148, 1, read_block (closure_145, 1))
     ;
-  val ignore_130 = write_block (block_129, 2, x) ;
-  block_129
-def lambda_33 (closure_128, y1, y2, y3, y4, y5) =
+  val ignore_149 = write_block (block_148, 2, x) ;
+  block_148
+def lambda_33 (closure_147, y1, y2, y3, y4, y5) =
   call
-  (read_block (read_block (closure_128, 1), 0))
+  (read_block (read_block (closure_147, 1), 0))
   with
   (
-    read_block (closure_128, 1),
-    read_block (closure_128, 2),
+    read_block (closure_147, 1),
+    read_block (closure_147, 2),
     y1,
     y2,
     y3,
@@ -552,14 +758,17 @@ def lambda_33 (closure_128, y1, y2, y3, y4, y5) =
     y5
   )
 val curry_2_6 =
-  val block_125 = allocate_block (1) ;
-  val ignore_135 =
-    write_block (block_125, 0, &lambda_35)
+  val block_144 = allocate_block (1) ;
+  val ignore_154 =
+    write_block (block_144, 0, &lambda_35)
     ;
-  block_125
+  block_144
 val test2_2 =
-  print_int
+  call
+  (read_block (print_int, 0))
+  with
   (
+    print_int,
     call
     (read_block
     (
@@ -607,8 +816,11 @@ val test2_2 =
     )
   )
 val test2_3 =
-  print_int
+  call
+  (read_block (print_int, 0))
+  with
   (
+    print_int,
     call
     (read_block
     (
@@ -657,8 +869,11 @@ val test2_3 =
     )
   )
 val test2_4 =
-  print_int
+  call
+  (read_block (print_int, 0))
+  with
   (
+    print_int,
     call
     (read_block
     (
@@ -708,8 +923,11 @@ val test2_4 =
     )
   )
 val test2_5 =
-  print_int
+  call
+  (read_block (print_int, 0))
+  with
   (
+    print_int,
     call
     (read_block
     (
@@ -760,8 +978,11 @@ val test2_5 =
     )
   )
 val test2_6 =
-  print_int
+  call
+  (read_block (print_int, 0))
+  with
   (
+    print_int,
     call
     (read_block
     (

@@ -51,6 +51,10 @@ let rbp = `Reg X86_64_Architecture.RBP
 
 let rdi = `Reg X86_64_Architecture.RDI
 
+let rax = `Reg X86_64_Architecture.RAX
+
+let rdx = `Reg X86_64_Architecture.RDX
+
 (** [align n b] returns the smallest multiple of [b] larger than [n]. *)
 let align n b =
   let m = n mod b in
@@ -489,9 +493,36 @@ module InstructionSelector : InstructionSelector = struct
       Instruction (Comment "end mul");
     ]
 
-  let div ~dst ~srcl ~srcr = failwith "Students! This is your job! 7"
+  let div ~dst ~srcl ~srcr =
+    [
+      Instruction
+        (Comment
+           (Printf.sprintf "div ~dst:%S ~srcl:%S ~srcr:%S" (string_of_dst dst)
+              (string_of_src srcl) (string_of_src srcr)));
+      Instruction (pushq ~src:rax);
+      Instruction (pushq ~src:rdx);
+      Instruction (zeroq rdx);
+      Instruction (movq ~src:srcl ~dst:rax);
+      Instruction (movq ~src:srcr ~dst:scratch);
+      Instruction (idivq ~src:scratch);
+      Instruction (movq ~src:rax ~dst);
+      Instruction (popq ~dst:rdx);
+      Instruction (popq ~dst:rax);
+    ]
 
-  let andl ~dst ~srcl ~srcr = failwith "Students! This is your job! 8"
+  let andl ~dst ~srcl ~srcr =
+    [
+      Instruction
+        (Comment
+           (Printf.sprintf "andl ~dst:%S ~srcl:%S ~srcr:%S" (string_of_dst dst)
+              (string_of_src srcl) (string_of_src srcr)));
+      Instruction (zeroq scratch);
+      Instruction (incq ~dst:scratch);
+      Instruction (andq ~src:srcr ~dst:scratch);
+      Instruction (andq ~src:srcl ~dst:scratch);
+      Instruction (movq ~src:scratch ~dst);
+      Instruction (Comment "end andl");
+    ]
 
   let orl ~(dst : dst) ~(srcl : src) ~(srcr : src) =
     [
@@ -499,9 +530,10 @@ module InstructionSelector : InstructionSelector = struct
         (Comment
            (Printf.sprintf "orl ~dst:%S ~srcl:%S ~srcr:%S" (string_of_dst dst)
               (string_of_src srcl) (string_of_src srcr)));
-      Instruction (xorq ~src:(dst :> T.src) ~dst);
-      Instruction (orq ~src:srcl ~dst);
-      Instruction (orq ~src:srcr ~dst);
+      Instruction (zeroq scratch);
+      Instruction (orq ~src:srcr ~dst:scratch);
+      Instruction (orq ~src:srcl ~dst:scratch);
+      Instruction (movq ~src:scratch ~dst);
       Instruction (Comment "end orl");
     ]
 

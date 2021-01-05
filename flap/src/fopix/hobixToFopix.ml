@@ -224,13 +224,13 @@ let free_variables =
         if is_primitive (match x with S.Id x -> x) then M.empty
         else M.singleton x
     | S.While (cond, e) -> fvs e
-    | S.Define (vd, a) -> (
+    | S.Define (vd, a) -> ( 
         match vd with
-        | SimpleValue (name, value) ->
+        | SimpleValue (name, value) -> (* let rec name = name in a *)
             M.union (M.remove name (fvs a)) (fvs value)
         | RecFunctions li           ->
             let names, values = List.split li in
-            M.diff (M.unions (List.map fvs values)) (M.of_list names) )
+            (M.diff (M.unions ((fvs a)::(List.map fvs values))) (M.of_list names) ))
     | S.ReadBlock (a, b) -> unions fvs [ a; b ]
     | S.Apply (a, b) -> unions fvs (a :: b)
     | S.WriteBlock (a, b, c) | S.IfThenElse (a, b, c) -> unions fvs [ a; b; c ]
